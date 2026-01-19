@@ -4,18 +4,31 @@
 # It discovers the upstream repo and branch automatically, so it works across
 # any fork without modification.
 #
-# REQUIRED PERMISSIONS:
-# This workflow needs write access to create branches and pull requests.
-# To enable this:
-#   1. Go to repo Settings → Actions → General
-#   2. Scroll to "Workflow permissions"
-#   3. Select "Read and write permissions"
-#   4. Check "Allow GitHub Actions to create and approve pull requests"
-#   5. Save
+# REQUIRED SETUP:
+# 
+# 1. Create a Fine-grained Personal Access Token (recommended for least privilege):
+#    a. Go to GitHub.com → Your Profile → Settings
+#    b. Developer settings → Personal access tokens → Fine-grained tokens
+#    c. Click "Generate new token"
+#    d. Token name: "Fork Sync Workflow"
+#    e. Expiration: Choose your preference (90 days, 1 year, or custom)
+#    f. Repository access: "Only select repositories" → Choose your fork repo
+#    g. Permissions → Repository permissions:
+#       - Contents: Read and write
+#       - Pull requests: Read and write
+#       - Metadata: Read-only (automatically selected)
+#    h. Click "Generate token" and copy it
+#
+# 2. Add the token to your repository:
+#    a. Go to your fork → Settings → Secrets and variables → Actions
+#    b. Click "New repository secret"
+#    c. Name: PAT_TOKEN
+#    d. Value: Paste the token you copied
+#    e. Click "Add secret"
 #
 # BRANCH PROTECTION:
 # If your main branch is protected, this workflow will create a PR instead
-# of pushing directly. You can then review and merge the PR.
+# of pushing directly. The PR will be auto-merged if checks pass.
 #
 # The workflow runs every 6 hours and only syncs when upstream has new commits.
 # You can also trigger it manually from the Actions tab.
