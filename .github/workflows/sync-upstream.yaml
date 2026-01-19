@@ -17,6 +17,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref_name }}
           
       - name: Configure Git
         run: |
@@ -25,6 +26,10 @@ jobs:
           
       - name: Discover and add upstream
         run: |
+          # Get current branch name
+          CURRENT_BRANCH="${{ github.ref_name }}"
+          echo "📍 Current fork branch: $CURRENT_BRANCH"
+          
           # Get the parent repo info from GitHub API
           PARENT=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}" | \
@@ -41,7 +46,9 @@ jobs:
           
           # Get default branch of upstream
           DEFAULT_BRANCH=$(git remote show upstream | grep 'HEAD branch' | cut -d' ' -f5)
+          echo "🔍 Upstream default branch: $DEFAULT_BRANCH"
           echo "UPSTREAM_BRANCH=$DEFAULT_BRANCH" >> $GITHUB_ENV
+          echo "FORK_BRANCH=$CURRENT_BRANCH" >> $GITHUB_ENV
           
       - name: Check for updates and sync
         run: |
@@ -54,6 +61,7 @@ jobs:
           fi
           
           echo "📦 New commits found in upstream, syncing..."
+          echo "   Merging upstream/${{ env.UPSTREAM_BRANCH }} into ${{ env.FORK_BRANCH }}"
           git merge upstream/${{ env.UPSTREAM_BRANCH }} --no-edit
-          git push origin ${{ env.UPSTREAM_BRANCH }}
+          git push origin ${{ env.FORK_BRANCH }}
           echo "✅ Successfully synced with upstream"
