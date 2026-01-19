@@ -110,13 +110,10 @@ jobs:
           git push origin "$SYNC_BRANCH"
           
           # Create PR using GitHub CLI
+          COMMIT_COUNT=$(git rev-list --count HEAD ^origin/${{ env.FORK_BRANCH }})
           PR_URL=$(gh pr create \
             --title "🔄 Sync with upstream (${{ env.UPSTREAM_BRANCH }})" \
-            --body "This PR syncs the fork with the latest changes from upstream/${{ env.UPSTREAM_BRANCH }}.
-
-**Upstream commits:** $(git rev-list --count HEAD ^origin/${{ env.FORK_BRANCH }})
-
-This PR was automatically created by the sync workflow and will be auto-merged." \
+            --body "This PR syncs the fork with the latest changes from upstream/${{ env.UPSTREAM_BRANCH }}. Upstream commits: $COMMIT_COUNT. This PR was automatically created by the sync workflow and will be auto-merged." \
             --base "${{ env.FORK_BRANCH }}" \
             --head "$SYNC_BRANCH")
           
