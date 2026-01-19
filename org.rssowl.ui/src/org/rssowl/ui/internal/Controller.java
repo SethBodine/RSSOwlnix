@@ -129,7 +129,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1216,7 +1215,7 @@ public class Controller {
     SafeRunner.run(new LoggingSafeRunnable() {
       @Override
       public void run() throws Exception {
-        OwlDAO.getDAO(INewsDAO.class).setState(EnumSet.of(INews.State.HIDDEN), INews.State.DELETED, false);
+        OwlDAO.getDAO(INewsDAO.class).setState(INews.State.asSet(INews.State.HIDDEN), INews.State.DELETED, false);
       }
     });
 
@@ -1627,7 +1626,7 @@ public class Controller {
     try {
       Set<IFolder> rootFolders = CoreUtils.loadRootFolders();
       if (!rootFolders.isEmpty() && !fShuttingDown) {
-        Owl.getInterpreter().exportTo(backupTmpFile, rootFolders, EnumSet.of(Options.EXPORT_FILTERS, Options.EXPORT_LABELS, Options.EXPORT_PREFERENCES));
+        Owl.getInterpreter().exportTo(backupTmpFile, rootFolders, Options.asSet(Options.EXPORT_FILTERS, Options.EXPORT_LABELS, Options.EXPORT_PREFERENCES));
 
         /* Rename to actual backup in a short op to avoid corrupt data */
         if (!backupTmpFile.renameTo(dailyBackupFile)) {
@@ -2037,7 +2036,7 @@ public class Controller {
           IStatus errorStatus = new Status(IStatus.ERROR, "org.rssowl.ui", IStatus.ERROR, error.getMessage(), error); //$NON-NLS-1$
           FatalOutOfMemoryErrorDialog dialog = new FatalOutOfMemoryErrorDialog(errorStatus);
           if (dialog.open() == IDialogConstants.HELP_ID)
-            Program.launch("https://github.com/Xyrio/RSSOwlnix/wiki/FAQ#item_6g"); //$NON-NLS-1$;
+            Program.launch(Owl.WIKI_URL + "/FAQ#item_6g"); //$NON-NLS-1$;
         }
 
         /* Serious problem - Exit (gives Shutdown Hook a chance to run) */

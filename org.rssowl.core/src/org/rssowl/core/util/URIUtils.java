@@ -335,8 +335,8 @@ public class URIUtils {
       int len = hostSegments.length;
 
       String hostOnly = hostPort.split(":")[0]; //$NON-NLS-1$
-      boolean isIP4 = InetAddressUtils.isIPv4Address(hostOnly);
-      boolean isIP6 = InetAddressUtils.isIPv6Address(hostOnly);
+      boolean isIP4 = InetAddressUtils.isIPv4(hostOnly);
+      boolean isIP6 = InetAddressUtils.isIPv6(hostOnly);
       if (len > 2 && !isIP4 && !isIP6 && !"www".equals(hostSegments[0])) //$NON-NLS-1$
         hostPort = hostSegments[len - 2] + "." + hostSegments[len - 1]; //$NON-NLS-1$
 
@@ -572,7 +572,7 @@ public class URIUtils {
    * The JDK implementation of {@link URI} will return <code>null</code> for
    * urls that contain an underscore. This method will fall back to Apache
    * Commons version of
-   * {@link org.apache.http.client.utils.URIUtils#extractHost(URI)} to get the
+   * {@link org.apache.hc.client5.http.utils.URIUtils#extractHost(URI)} to get the
    * host information in this case.
    *
    * @param uri the {@link URI} to retrieve the host from.
