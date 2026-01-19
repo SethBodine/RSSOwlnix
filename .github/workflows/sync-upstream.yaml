@@ -1,4 +1,25 @@
 # .github/workflows/sync-upstream.yml
+#
+# This workflow automatically syncs your fork with its upstream repository.
+# It discovers the upstream repo and branch automatically, so it works across
+# any fork without modification.
+#
+# REQUIRED PERMISSIONS:
+# This workflow needs write access to create branches and pull requests.
+# To enable this:
+#   1. Go to repo Settings → Actions → General
+#   2. Scroll to "Workflow permissions"
+#   3. Select "Read and write permissions"
+#   4. Check "Allow GitHub Actions to create and approve pull requests"
+#   5. Save
+#
+# BRANCH PROTECTION:
+# If your main branch is protected, this workflow will create a PR instead
+# of pushing directly. You can then review and merge the PR.
+#
+# The workflow runs every 6 hours and only syncs when upstream has new commits.
+# You can also trigger it manually from the Actions tab.
+
 name: Sync Fork with Upstream
 
 on:
@@ -6,6 +27,11 @@ on:
     # Check for upstream changes every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:  # Allows manual trigger from Actions tab
+
+# Required for pushing synced changes to your fork and creating PRs
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   sync:
@@ -16,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref_name }}
           
       - name: Configure Git
@@ -31,7 +57,7 @@ jobs:
           echo "📍 Current fork branch: $CURRENT_BRANCH"
           
           # Get the parent repo info from GitHub API
-          PARENT=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          PARENT=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}" | \
             jq -r '.parent.full_name // empty')
           
@@ -53,7 +79,7 @@ jobs:
       - name: Check for updates and sync
         run: |
           # Set up authentication for push
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           
           LOCAL=$(git rev-parse HEAD)
           REMOTE=$(git rev-parse upstream/${{ env.UPSTREAM_BRANCH }})
@@ -65,6 +91,50 @@ jobs:
           
           echo "📦 New commits found in upstream, syncing..."
           echo "   Merging upstream/${{ env.UPSTREAM_BRANCH }} into ${{ env.FORK_BRANCH }}"
+          
+          # Create a sync branch
+          SYNC_BRANCH="sync-upstream-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$SYNC_BRANCH"
           git merge upstream/${{ env.UPSTREAM_BRANCH }} --no-edit
-          git push origin ${{ env.FORK_BRANCH }}
-          echo "✅ Successfully synced with upstream"
+          
+          # Try to push directly first (works if branch is not protected)
+          if git push origin "$SYNC_BRANCH:${{ env.FORK_BRANCH }}" 2>/dev/null; then
+            echo "✅ Successfully pushed directly to ${{ env.FORK_BRANCH }}"
+            exit 0
+          fi
+          
+          # If direct push fails, create a PR instead
+          echo "⚠️  Direct push failed (likely due to branch protection)"
+          echo "📝 Creating pull request instead..."
+          
+          git push origin "$SYNC_BRANCH"
+          
+          # Create PR using GitHub CLI
+          PR_URL=$(gh pr create \
+            --title "🔄 Sync with upstream (${{ env.UPSTREAM_BRANCH }})" \
+            --body "This PR syncs the fork with the latest changes from upstream/${{ env.UPSTREAM_BRANCH }}.
+
+**Upstream commits:** $(git rev-list --count HEAD ^origin/${{ env.FORK_BRANCH }})
+
+This PR was automatically created by the sync workflow and will be auto-merged." \
+            --base "${{ env.FORK_BRANCH }}" \
+            --head "$SYNC_BRANCH")
+          
+          echo "✅ Pull request created: $PR_URL"
+          
+          # Auto-merge the PR
+          echo "🔀 Auto-merging pull request..."
+          gh pr merge "$PR_URL" --merge --auto
+          
+          echo "✅ Pull request will be merged automatically once checks pass"
+          
+          # Wait a bit for the merge to complete
+          sleep 10
+          
+          # Clean up the sync branch
+          echo "🧹 Cleaning up sync branch..."
+          git push origin --delete "$SYNC_BRANCH" || echo "⚠️  Branch may have been auto-deleted"
+          
+          echo "✅ Sync complete!"
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
