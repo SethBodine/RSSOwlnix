@@ -1,0 +1,59 @@
+# .github/workflows/sync-upstream.yml
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    # Check for upstream changes every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # Allows manual trigger from Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Discover and add upstream
+        run: |
+          # Get the parent repo info from GitHub API
+          PARENT=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}" | \
+            jq -r '.parent.full_name // empty')
+          
+          if [ -z "$PARENT" ]; then
+            echo "❌ This doesn't appear to be a fork"
+            exit 1
+          fi
+          
+          echo "🔍 Discovered upstream: $PARENT"
+          git remote add upstream "https://github.com/${PARENT}.git" || true
+          git fetch upstream
+          
+          # Get default branch of upstream
+          DEFAULT_BRANCH=$(git remote show upstream | grep 'HEAD branch' | cut -d' ' -f5)
+          echo "UPSTREAM_BRANCH=$DEFAULT_BRANCH" >> $GITHUB_ENV
+          
+      - name: Check for updates and sync
+        run: |
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse upstream/${{ env.UPSTREAM_BRANCH }})
+          
+          if [ "$LOCAL" = "$REMOTE" ]; then
+            echo "✅ Already up to date with upstream"
+            exit 0
+          fi
+          
+          echo "📦 New commits found in upstream, syncing..."
+          git merge upstream/${{ env.UPSTREAM_BRANCH }} --no-edit
+          git push origin ${{ env.UPSTREAM_BRANCH }}
+          echo "✅ Successfully synced with upstream"
