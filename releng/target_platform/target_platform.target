@@ -3,7 +3,7 @@
 <target name="rssowlnix" sequenceNumber="20">
 	<locations>
 		<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="true" type="InstallableUnit">
-			<repository location="https://download.eclipse.org/eclipse/updates/4.30"/>
+			<repository location="https://archive.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110"/>
 			<unit id="org.eclipse.equinox.sdk.feature.group" version="3.23.1000.v20231114-0937"/>
 			<unit id="org.eclipse.rcp.feature.group" version="4.30.0.v20231201-0512"/>
 			<unit id="org.eclipse.sdk.ide" version="4.30.0.I20231201-0110"/>
