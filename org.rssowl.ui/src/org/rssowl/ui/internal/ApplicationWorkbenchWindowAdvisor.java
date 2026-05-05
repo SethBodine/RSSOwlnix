@@ -488,6 +488,19 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
     /* Apply Image */
     fTrayItem.setImage(OwlUI.getImage(fResources, OwlUI.TRAY_OWL));
 
+    /* Recover tray icon when Windows Explorer crashes and restarts */
+    fTrayItem.addListener(SWT.Dispose, new Listener() {
+      @Override
+      public void handleEvent(Event event) {
+        /* Only act if the disposal was external (Explorer crash), not our own disableTray() */
+        if (fTrayEnabled) {
+          fTrayEnabled = false;
+          fTrayItem = null;
+          scheduleTrayRecovery(shell);
+        }
+      }
+    });
+
     /* Minimize to Tray on Shell Iconify if set */
     fTrayShellListener = new ShellAdapter() {
 
@@ -612,6 +625,47 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
     return true;
   }
 
+  /**
+   * Schedules a delayed attempt to re-enable the system tray icon after an
+   * external disposal event such as Windows Explorer crashing and restarting.
+   * Retries up to 5 times with 3-second intervals to give Explorer time to
+   * fully restart before the system tray is available again.
+   */
+  private void scheduleTrayRecovery(final Shell shell) {
+    scheduleTrayRecovery(shell, 1);
+  }
+
+  private void scheduleTrayRecovery(final Shell shell, final int attempt) {
+    if (attempt > 5)
+      return;
+
+    shell.getDisplay().timerExec(3000, new Runnable() {
+      @Override
+      public void run() {
+        if (shell.isDisposed())
+          return;
+
+        /* Only recover if tray is still needed (not manually disabled by user) */
+        boolean shouldHaveTray = fPreferences.getBoolean(DefaultPreferences.TRAY_ON_MINIMIZE)
+            || fPreferences.getBoolean(DefaultPreferences.TRAY_ON_CLOSE)
+            || fPreferences.getBoolean(DefaultPreferences.TRAY_ON_START);
+
+        if (!fTrayEnabled && shouldHaveTray) {
+          boolean recovered = enableTray();
+
+          if (recovered) {
+            /* Window was hidden when Explorer crashed - restore it since the icon was lost */
+            if (fMinimizedToTray)
+              restoreFromTray(shell);
+          } else {
+            /* Tray not available yet - try again */
+            scheduleTrayRecovery(shell, attempt + 1);
+          }
+        }
+      }
+    });
+  }
+
   /* Move to System Tray */
   private void moveToTray(Shell shell) {
     if (Application.IS_WINDOWS)
@@ -661,7 +715,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
   }
 
   private void clearTease(boolean clearTray) {
-    if (fTrayTeasing)
+    if (fTrayTeasing && fTrayItem != null && !fTrayItem.isDisposed())
       fTrayItem.setImage(OwlUI.getImage(fResources, OwlUI.TRAY_OWL));
 
     fTrayTeasing = false;
@@ -671,7 +725,8 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
         fTeasingNewsCache.clear();
       }
 
-      fTrayItem.setToolTipText(clearTray ? "" :  Owl.APPLICATION_NAME); //$NON-NLS-1$
+      if (fTrayItem != null && !fTrayItem.isDisposed())
+        fTrayItem.setToolTipText(clearTray ? "" :  Owl.APPLICATION_NAME); //$NON-NLS-1$
     }
   }
 
