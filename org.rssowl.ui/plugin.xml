@@ -889,7 +889,7 @@
                value="icons/product/16x16.png,icons/product/32x32.png,icons/product/48x48.png,icons/product/64x64.png,icons/product/128x128.png,icons/product/256x256.png"/>
          <property
                name="aboutText"
-               value="RSSOwlnix fork of RSSOwl&#x0A;&#x0A;Version: 2.10.1-beta&#x0A;Build Id: 2026-05-05&#x0A;&#x0A;RSSOwlnix and RSSOwl is licensed under the terms of the Eclipse Public License version 1.0.&#x0A;http://www.rssowl.org/legal/epl-v10.html&#x0A;&#x0A;(c) Copyright RSSOwl contributors and others 2005-2011.  All rights reserved."/>
+               value="RSSOwlnix fork of RSSOwl&#x0A;&#x0A;Version: 2.10.0-beta&#x0A;Build Id: 2025-07-15&#x0A;&#x0A;RSSOwlnix and RSSOwl is licensed under the terms of the Eclipse Public License version 1.0.&#x0A;http://www.rssowl.org/legal/epl-v10.html&#x0A;&#x0A;(c) Copyright RSSOwl contributors and others 2005-2011.  All rights reserved."/>
          <property
                name="appName"
                value="%product.name">
@@ -1734,42 +1734,66 @@
    </extension>
    <extension
          point="org.rssowl.ui.ShareProvider">
+
+      <!-- Social Networks -->
       <shareProvider
             enabled="true"
-            icon="icons/obj16/share_delicious.gif"
-            id="org.rssowl.ui.DeliciousShareProvider"
-            name="%shareProvider.name"
-            url="http://delicious.com/save?url=[L]&amp;title=[T]">
+            icon="icons/obj16/share_x.gif"
+            id="org.rssowl.ui.XShareProvider"
+            name="X"
+            url="https://x.com/intent/tweet?url=[L]&amp;text=[T]">
+      </shareProvider>
+      <shareProvider
+            enabled="true"
+            icon="icons/obj16/share_bluesky.gif"
+            id="org.rssowl.ui.BlueskyShareProvider"
+            name="Bluesky"
+            url="https://bsky.app/intent/compose?text=[T]%20[L]">
       </shareProvider>
       <shareProvider
             enabled="false"
-            icon="icons/obj16/share_technorati.gif"
-            id="org.rssowl.ui.TechnoratiShareProvider"
-            name="%shareProvider.name.0"
-            url="http://www.technorati.com/faves/?add=[L]">
+            icon="icons/obj16/share_threads.gif"
+            id="org.rssowl.ui.ThreadsShareProvider"
+            name="Threads"
+            url="https://www.threads.net/intent/post?text=[T]%20[L]">
       </shareProvider>
       <shareProvider
             enabled="true"
             icon="icons/obj16/share_fb.gif"
             id="org.rssowl.ui.FacebookShareProvider"
             name="%shareProvider.name.1"
-            url="http://www.facebook.com/sharer.php?u=[L]&amp;t=[T]">
+            url="https://www.facebook.com/sharer/sharer.php?u=[L]">
       </shareProvider>
       <shareProvider
             enabled="false"
-            icon="icons/obj16/share_digg.gif"
-            id="org.rssowl.ui.DiggShareProvider"
-            maxTitleLength="75"
-            name="%shareProvider.name.2"
-            url="http://digg.com/submit?url=[L]&amp;title=[T]">
+            icon="icons/obj16/share_linkedin.gif"
+            id="org.rssowl.ui.LinkedInShareProvider"
+            name="%shareProvider.name.17"
+            url="https://www.linkedin.com/sharing/share-offsite/?url=[L]">
       </shareProvider>
       <shareProvider
-            enabled="true"
-            icon="icons/obj16/share_twitter.gif"
-            id="org.rssowl.ui.TwitterShareProvider"
-            name="%shareProvider.name.3"
-            url="http://twitter.com/home?status=[L]">
+            enabled="false"
+            icon="icons/obj16/share_reddit.gif"
+            id="org.rssowl.ui.RedditShareProvider"
+            name="%shareProvider.name.8"
+            url="https://www.reddit.com/submit?url=[L]&amp;title=[T]">
       </shareProvider>
+      <shareProvider
+            enabled="false"
+            icon="icons/obj16/share_whatsapp.gif"
+            id="org.rssowl.ui.WhatsAppShareProvider"
+            name="WhatsApp"
+            url="https://wa.me/?text=[T]%20[L]">
+      </shareProvider>
+      <shareProvider
+            enabled="false"
+            icon="icons/obj16/share_telegram.gif"
+            id="org.rssowl.ui.TelegramShareProvider"
+            name="%shareProvider.name.28"
+            url="https://t.me/share/url?url=[L]&amp;text=[T]">
+      </shareProvider>
+
+      <!-- Messaging / Email -->
       <shareProvider
             enabled="true"
             icon="icons/obj16/share_mail.gif"
@@ -1777,170 +1801,58 @@
             name="%shareProvider.name.4"
             url="mailto">
       </shareProvider>
+
+      <!-- Read Later / Bookmarking -->
       <shareProvider
             enabled="true"
-            icon="icons/obj16/share_printfriendly.gif"
-            id="org.rssowl.ui.PrintFriendlyShareProvider"
-            name="%shareProvider.name.5"
-            url="http://www.printfriendly.com/print?url=[L]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_stumbleupon.gif"
-            id="org.rssowl.ui.StumbleuponShareProvider"
-            name="%shareProvider.name.6"
-            url="http://www.stumbleupon.com/submit?url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_google.gif"
-            id="org.rssowl.ui.GoogleShareProvider"
-            name="%shareProvider.name.7"
-            url="http://www.google.com/bookmarks/mark?op=edit&amp;bkmk=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_reddit.gif"
-            id="org.rssowl.ui.RedditShareProvider"
-            name="%shareProvider.name.8"
-            url="http://www.reddit.com/submit?url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_mixx.gif"
-            id="org.rssowl.ui.MixxShareProvider"
-            name="%shareProvider.name.9"
-            url="http://www.mixx.com/submit?page_url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_friendfeed.gif"
-            id="org.rssowl.ui.FriendFeedShareProvider"
-            name="%shareProvider.name.10"
-            url="http://friendfeed.com/share?url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_newsvine.gif"
-            id="org.rssowl.ui.NewsvineShareProvider"
-            name="%shareProvider.name.12"
-            url="http://www.newsvine.com/_tools/seed&amp;save?u=[L]&amp;h=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_myspace.gif"
-            id="org.rssowl.ui.MyspaceShareProvider"
-            name="%shareProvider.name.13"
-            url="http://www.myspace.com/Modules/PostTo/Pages/?l=3&amp;u=[L]&amp;t=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_slashdot.gif"
-            id="org.rssowl.ui.SlashdotShareProvider"
-            name="%shareProvider.name.14"
-            url="http://slashdot.org/bookmark.pl?title=[T]&amp;url=[L]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_yahoobuzz.gif"
-            id="org.rssowl.ui.BuzzShareProvider"
-            name="%shareProvider.name.15"
-            url="http://buzz.yahoo.com/buzz?targetUrl=[L]&amp;headline=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_diigo.gif"
-            id="org.rssowl.ui.DiigoShareProvider"
-            name="%shareProvider.name.16"
-            url="http://secure.diigo.com/post?url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_linkedin.gif"
-            id="org.rssowl.ui.LinkedInShareProvider"
-            name="%shareProvider.name.17"
-            url="http://www.linkedin.com/shareArticle?mini=true&amp;url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_posterous.gif"
-            id="org.rssowl.ui.PosterousShareProvider"
-            name="%shareProvider.name.18"
-            url="http://posterous.com/share?linkto=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_tumblr.gif"
-            id="org.rssowl.ui.TumblrShareProvider"
-            name="%shareProvider.name.19"
-            url="http://www.tumblr.com/share?v=3&amp;u=[L]&amp;t=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_propeller.gif"
-            id="org.rssowl.ui.PropellerShareProvider"
-            name="%shareProvider.name.20"
-            url="http://www.propeller.com/submit/?U=[L]&amp;T=[T]">
+            icon="icons/obj16/share_pocket.gif"
+            id="org.rssowl.ui.PocketShareProvider"
+            name="%shareProvider.name.22"
+            url="https://getpocket.com/save?url=[L]&amp;title=[T]">
       </shareProvider>
       <shareProvider
             enabled="false"
             icon="icons/obj16/share_evernote.gif"
             id="org.rssowl.ui.EvernoteShareProvider"
             name="%shareProvider.name.21"
-            url="http://www.evernote.com/clip.action?url=[L]&amp;title=[T]">
+            url="https://www.evernote.com/clip.action?url=[L]&amp;title=[T]">
       </shareProvider>
+
+      <!-- Blogging / Publishing -->
       <shareProvider
-            enabled="true"
-            icon="icons/obj16/share_pocket.gif"
-            id="org.rssowl.ui.PocketShareProvider"
-            name="%shareProvider.name.22"
-            url="http://getpocket.com/edit.php?url=[L]&amp;title=[T]">
+            enabled="false"
+            icon="icons/obj16/share_substack.gif"
+            id="org.rssowl.ui.SubstackShareProvider"
+            name="Substack Notes"
+            url="https://substack.com/notes">
       </shareProvider>
       <shareProvider
             enabled="false"
-            icon="icons/obj16/share_blogger.gif"
-            id="org.rssowl.ui.BloggerShareProvider"
-            name="%shareProvider.name.23"
-            url="http://www.blogger.com/blog_this.pyra?t&amp;u=[L]&amp;n=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_lj.gif"
-            id="org.rssowl.ui.LiveJournalShareProvider"
-            name="%shareProvider.name.24"
-            url="http://www.livejournal.com/update.bml?mode=full&amp;event=[L]&amp;subject=[T]">
+            icon="icons/obj16/share_tumblr.gif"
+            id="org.rssowl.ui.TumblrShareProvider"
+            name="%shareProvider.name.19"
+            url="https://www.tumblr.com/widgets/share/tool?canonicalUrl=[L]&amp;title=[T]">
       </shareProvider>
       <shareProvider
             enabled="false"
             icon="icons/obj16/share_buffer.gif"
             id="org.rssowl.ui.BufferShareProvider"
             name="%shareProvider.name.25"
-            url="http://bufferapp.com/add?url=[L]&amp;text=[T]">
+            url="https://buffer.com/add?url=[L]&amp;text=[T]">
       </shareProvider>
+
+      <!-- Utilities -->
       <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_readability.gif"
-            id="org.rssowl.ui.ReadabilityShareProvider"
-            name="%shareProvider.name.27"
-            url="http://www.readability.com/read?url=[L]">
+            enabled="true"
+            icon="icons/obj16/share_printfriendly.gif"
+            id="org.rssowl.ui.PrintFriendlyShareProvider"
+            name="%shareProvider.name.5"
+            url="https://www.printfriendly.com/print?url=[L]">
       </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_telegram.gif"
-            id="org.rssowl.ui.TelegramShareProvider"
-            name="%shareProvider.name.28"
-            url="https://telegram.me/share/url?url=[L]&amp;text=[T]">
-       </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_bibsonomy.png"
-            id="org.rssowl.ui.BibsonomyShareProvider"
-            name="%shareProvider.name.29"
-			method="POST"
-            url="https://www.bibsonomy.org/ShowBookmarkEntry?url=[L]&amp;description=[T]&amp;abstractGrouping=public">
-       </shareProvider>
+
    </extension>
    <extension
+         point="org.rssowl.ui.FeedSearch">   <extension
          point="org.rssowl.ui.FeedSearch">
       <feedSearch
             id="org.rssowl.ui.DefaultFeedSearch"
@@ -2091,3 +2003,4 @@
       </linkTransformer>
    </extension>
 </plugin>
+
