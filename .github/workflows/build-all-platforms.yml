@@ -80,6 +80,14 @@ jobs:
         env:
           MAVEN_OPTS: "-Xmx2g -XX:+UseParallelGC"
 
+      - name: List produced artifacts (debug)
+        if: always()
+        run: |
+          echo "=== Contents of releng/product/target/products ==="
+          find releng/product/target/products -type f | sort || echo "(directory not found)"
+          echo "=== All ZIPs under releng/product/target ==="
+          find releng/product/target -name "*.zip" | sort || echo "(none found)"
+
       - name: Find ZIP artifact
         id: find_zip
         run: |
