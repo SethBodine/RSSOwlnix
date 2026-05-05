@@ -491,13 +491,16 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
      * setVisible(false) called synchronously in the same event loop tick is
      * not always honoured before the shell paints. Deferring with asyncExec
      * ensures it runs after the OS has processed the tray item creation.
+     * Guard against TRAY_ON_START: if moveToTray() has already run by the
+     * time this fires, fMinimizedToTray will be true and the icon must stay
+     * visible  don't hide it.
      */
     if (Application.IS_WINDOWS) {
       final TrayItem itemToHide = fTrayItem;
       shell.getDisplay().asyncExec(new Runnable() {
         @Override
         public void run() {
-          if (itemToHide != null && !itemToHide.isDisposed())
+          if (itemToHide != null && !itemToHide.isDisposed() && !fMinimizedToTray)
             itemToHide.setVisible(false);
         }
       });
