@@ -1640,6 +1640,15 @@ public class FeedView extends EditorPart implements IReusableEditor {
     /* Bump generation so any in-flight UI update for the previous mark is discarded */
     final int generation = ++fInputGeneration;
 
+    /*
+     * Capture the content provider RIGHT NOW. If the user navigates away before
+     * this job's runInBackground executes, fContentProvider (the field) will
+     * have been swapped to a new instance for the next feed. Without this
+     * capture, runInBackground would call refreshCache on the wrong provider,
+     * loading the previous feed's articles into the new feed's cache.
+     */
+    final NewsContentProvider localContentProvider = fContentProvider;
+
     /* Update Cache in Background and then apply to UI */
     JobRunner.runUIUpdater(new UIBackgroundJob(fParent) {
       private IProgressMonitor fBgMonitor;
@@ -1653,7 +1662,7 @@ public class FeedView extends EditorPart implements IReusableEditor {
       protected void runInBackground(IProgressMonitor monitor) {
         fBgMonitor = monitor;
         if (!monitor.isCanceled())
-          fContentProvider.refreshCache(monitor, mark);
+          localContentProvider.refreshCache(monitor, mark);
       }
 
       @Override
