@@ -265,6 +265,8 @@ public class FeedView extends EditorPart implements IReusableEditor {
   private long fOpenTime;
   private boolean fCreated;
   private final Object fCacheJobIdentifier = new Object();
+  /** Incremented on every input change; jobs check this to detect stale updates. */
+  private volatile int fInputGeneration = 0;
   private ImageDescriptor fTitleImageDescriptor;
   private Label fHorizontalFilterTableSep;
   private Label fHorizontalBrowserSep;
@@ -1635,6 +1637,9 @@ public class FeedView extends EditorPart implements IReusableEditor {
   /* Set Input to Viewers */
   private void setInput(final INewsMark mark, final boolean reused) {
 
+    /* Bump generation so any in-flight UI update for the previous mark is discarded */
+    final int generation = ++fInputGeneration;
+
     /* Update Cache in Background and then apply to UI */
     JobRunner.runUIUpdater(new UIBackgroundJob(fParent) {
       private IProgressMonitor fBgMonitor;
@@ -1653,6 +1658,10 @@ public class FeedView extends EditorPart implements IReusableEditor {
 
       @Override
       protected void runInUI(IProgressMonitor monitor) {
+        /* Discard update if a newer input was set while this job was queued */
+        if (fInputGeneration != generation)
+          return;
+
         IStructuredSelection oldSelection = null;
         IPreferenceScope entityPreferences = Owl.getPreferenceService().getEntityScope(mark);
 
