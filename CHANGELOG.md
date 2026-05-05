@@ -1,7 +1,95 @@
-updates feed: https://xyrio.github.io/RSSOwlnix-site/updates.rss
+# Changelog
 
-# WIP
-- updated crash report email
+## [2.10.1] - 2025-05-05
+
+### Bug Fixes
+
+- **Systray icon lost after Windows Explorer crash**
+  When Windows Explorer crashed and restarted, the system tray icon would
+  disappear with no way to restore it short of killing and relaunching the
+  application. The application now detects the external disposal of the tray
+  icon and automatically attempts to recover it, retrying every 3 seconds for
+  up to 5 attempts to allow Explorer time to fully restart. If the window was
+  hidden to the tray at the time of the crash it is automatically restored to
+  the foreground so the user is not left with no way to access the application.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java`
+
+- **Stale feed content when navigating A  B  A in Reuse Feed View mode**
+  Navigating from one feed to another and back again would display the content
+  of the intermediate feed rather than refreshing back to the original. The root
+  cause was a race condition in the background content-loading job: the job
+  captured the content provider as a field reference rather than a snapshot, so
+  a rapidly submitted follow-up job could corrupt the cache of the already-active
+  provider before the UI update ran. Fixed by capturing the content provider
+  instance at job-submission time and adding a generation counter to discard any
+  UI updates that belong to a superseded navigation.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FeedView.java`
+
+### New Features
+
+- **Search article body / description content**
+  The quick-search dropdown in the feed filter bar now includes a
+  _Find in Article Body_ option, allowing searches against the full text of
+  article descriptions rather than only headlines, authors, categories and
+  labels.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsFilter.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FilterBar.java`
+
+- **Today and This Week filter options**
+  Two new time-based filters have been added to the show-filter dropdown:
+  _Show Today_ (articles since midnight) and _Show This Week_ (articles within
+  the last 7 days). Both can also be promoted to saved searches via the existing
+  Save as Search option.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsFilter.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FilterBar.java`
+
+### Build & CI
+
+- **GitHub Actions workflow for Windows packaging**
+  Added `.github/workflows/build-windows.yml` which uses the existing
+  Tycho/Maven build cross-compiled on an Ubuntu runner to produce a Windows
+  x86_64 ZIP. The ZIP is uploaded as a workflow artifact on every push to
+  `main` and automatically attached to a GitHub Release when a version tag
+  (e.g. `v2.10.1`) is pushed. Pre-release tags (`-beta`, `-rc`) are marked
+  accordingly. No code-signing certificate is required.
+
+- **Eclipse 4.30 target platform pointed to archive**
+  The target platform repository URL was updated from `download.eclipse.org`
+  to `archive.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110` so that
+  the build resolves against the stable archived release rather than the live
+  redirecting URL which caused intermittent download failures in CI.
+  `releng/target_platform/target_platform.target`
+
+- **p2 artifact caching added to CI workflow**
+  The Tycho p2 local repository (`~/.m2/repository/p2`) is now cached between
+  workflow runs keyed on the target platform file, preventing repeated downloads
+  of Eclipse platform artifacts from the archive on every build.
+
+### Developer Tooling
+
+- **`set-version.sh`  centralised version management script**
+  A bash script has been added to the repository root that updates all version
+  references across the codebase in a single command. Requires only a standard
+  bash shell and `sed`  no Maven or other tooling needed on the editing
+  machine. Usage:
+
+  ```bash
+  ./set-version.sh 2.10.1           # full release
+  ./set-version.sh 2.11.0 beta      # pre-release with label
+  ```
+
+  Files updated by the script:
+  - `org.rssowl.core/META-INF/MANIFEST.MF`
+  - `org.rssowl.ui/META-INF/MANIFEST.MF`
+  - `org.rssowl.core.tests/META-INF/MANIFEST.MF`
+  - `org.rssowl.lib.httpclient/META-INF/MANIFEST.MF`
+  - All `feature.xml` and `category.xml` files
+  - `releng/product/rssowlnix.product`
+  - `releng/product_manual_export/rssowlnix.product`
+  - `org.rssowl.ui/config.ini`
+  - `org.rssowl.ui/plugin.xml`
+
+---
 
 # 2.10.0-beta
 - runs with java 17,21 [#116](https://github.com/Xyrio/RSSOwlnix/issues/116)
