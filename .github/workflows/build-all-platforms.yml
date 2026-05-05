@@ -1,0 +1,129 @@
+name: Build All Platforms
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ubuntu-latest   # Tycho cross-compiles all platforms from Linux
+
+    strategy:
+      fail-fast: false       # Let other platforms finish even if one fails
+      matrix:
+        include:
+          - name: Windows x64
+            environment: win32,win32,x86_64
+            artifact_name: RSSOwlnix-Windows-x64
+            zip_pattern: "*win32*.zip"
+
+          - name: Linux x64
+            environment: linux,gtk,x86_64
+            artifact_name: RSSOwlnix-Linux-x64
+            zip_pattern: "*linux*.zip"
+
+          - name: macOS x64
+            environment: macosx,cocoa,x86_64
+            artifact_name: RSSOwlnix-macOS-x64
+            zip_pattern: "*macosx*.zip"
+
+    steps:
+      #  Checkout 
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      #  Java 
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      #  Cache Eclipse p2 artifacts 
+      - name: Cache Tycho p2 repository
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository/p2
+          key: tycho-p2-${{ hashFiles('releng/target_platform/target_platform.target') }}
+          restore-keys: |
+            tycho-p2-
+
+      #  Build 
+      - name: Build with Maven/Tycho
+        run: |
+          for attempt in 1 2 3; do
+            echo "=== Build attempt $attempt for ${{ matrix.name }} ==="
+            mvn -B clean verify \
+              -Denvironments="${{ matrix.environment }}" \
+              -DskipTests \
+              --no-transfer-progress \
+              -Dmaven.wagon.http.retryHandler.count=3 \
+              -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true \
+              -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 \
+              -Dmaven.wagon.rto=120000 && break
+            if [ $attempt -eq 3 ]; then
+              echo "All 3 attempts failed"
+              exit 1
+            fi
+            echo "Attempt $attempt failed, waiting 30s before retry..."
+            sleep 30
+          done
+        env:
+          MAVEN_OPTS: "-Xmx2g -XX:+UseParallelGC"
+
+      #  Locate ZIP 
+      - name: Find ZIP artifact
+        id: find_zip
+        run: |
+          ZIP=$(find releng/product/target/products -name "${{ matrix.zip_pattern }}" | head -1)
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: no ZIP matching ${{ matrix.zip_pattern }} found"
+            find releng/product/target -name "*.zip" || true
+            exit 1
+          fi
+          echo "zip_path=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "zip_name=$(basename $ZIP)" >> "$GITHUB_OUTPUT"
+          echo "Found: $ZIP"
+
+      #  Upload artifact 
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ steps.find_zip.outputs.zip_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+  #  Release job  runs after all builds succeed 
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
