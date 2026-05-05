@@ -249,7 +249,7 @@ public class ApplicationServer {
       try {
         int port = ports.get(i);
         fPort = port;
-        return new ServerSocket(fPort, 50, InetAddress.getByName(LOCALHOST));
+        return new ServerSocket(fPort, 50, InetAddress.getLoopbackAddress());
       } catch (UnknownHostException e) {
         throw e;
       } catch (BindException e) {
@@ -815,3 +815,4 @@ public class ApplicationServer {
     return LOCALHOST;
   }
 }
+
