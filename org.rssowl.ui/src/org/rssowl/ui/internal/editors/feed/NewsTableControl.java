@@ -697,6 +697,23 @@ public class NewsTableControl implements IFeedViewPart {
       }
     };
     PlatformUI.getWorkbench().getThemeManager().addPropertyChangeListener(fPropertyChangeListener);
+
+    /*
+     * Mark items as read when they scroll out of the viewport. Items bypassed
+     * by dragging the scrollbar are treated as "seen" and marked read using
+     * the same setNewsState path as a normal selection, but immediately
+     * (without delay) because the user has already scrolled past them.
+     */
+    final Tree scrollTree = fViewer.getTree();
+    ScrollBar verticalBar = scrollTree.getVerticalBar();
+    if (verticalBar != null) {
+      verticalBar.addListener(SWT.Selection, new Listener() {
+        @Override
+        public void handleEvent(Event event) {
+          onScrolled(scrollTree);
+        }
+      });
+    }
   }
 
   private void onMouseDoubleClick(DoubleClickEvent event) {
@@ -1097,6 +1114,48 @@ public class NewsTableControl implements IFeedViewPart {
       fViewer.setInput(((IEntity) input).toReference());
     else
       fViewer.setInput(input);
+
+    /*
+     * If every item in the feed fits in the visible area (no scrollbar needed)
+     * and nothing is selected, programmatically select the first news item so
+     * the normal mark-as-read delay tracker fires. Without this, a feed whose
+     * entire content fits in the window with no prior stored selection is
+     * never marked read because no selection-change event is ever dispatched.
+     */
+    final Tree tree = fViewer.getTree();
+    tree.getDisplay().asyncExec(new Runnable() {
+      @Override
+      public void run() {
+        if (tree.isDisposed() || tree.getSelectionCount() > 0)
+          return;
+
+        ScrollBar vBar = tree.getVerticalBar();
+        boolean noScrollNeeded = (vBar == null || !vBar.isVisible());
+        if (!noScrollNeeded)
+          return;
+
+        /* Find the first news item (may be inside a group) */
+        TreeItem[] roots = tree.getItems();
+        for (TreeItem root : roots) {
+          Object data = root.getData();
+          if (data instanceof INews) {
+            tree.select(root);
+            tree.notifyListeners(SWT.Selection, new Event());
+            return;
+          }
+
+          /* Grouped view  look inside the group node */
+          for (int i = 0; i < root.getItemCount(); i++) {
+            TreeItem child = root.getItem(i);
+            if (child.getData() instanceof INews) {
+              tree.select(child);
+              tree.notifyListeners(SWT.Selection, new Event());
+              return;
+            }
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -1147,6 +1206,61 @@ public class NewsTableControl implements IFeedViewPart {
     fViewer.removeSelectionChangedListener(fSelectionChangeListener);
     OwlDAO.removeEntityListener(ILabel.class, fLabelListener);
     PlatformUI.getWorkbench().getThemeManager().removePropertyChangeListener(fPropertyChangeListener);
+  }
+
+  /**
+   * Called when the vertical scroll bar fires a selection event. Marks any
+   * news items that have scrolled above the current top of the viewport as
+   * read, so items bypassed by dragging the scrollbar are treated as seen.
+   */
+  private void onScrolled(Tree tree) {
+    if (tree.isDisposed())
+      return;
+
+    /* Only act if mark-as-read is enabled in preferences */
+    final boolean markRead = fInputPreferences.getBoolean(DefaultPreferences.MARK_READ_STATE);
+    if (!markRead)
+      return;
+
+    TreeItem topItem = tree.getTopItem();
+    if (topItem == null)
+      return;
+
+    markItemsAboveViewport(tree, topItem);
+  }
+
+  /**
+   * Iterates tree items in display order and marks every unread news item
+   * that appears above {@code topVisible} as read. Handles both flat lists
+   * and grouped views where news items are children of group nodes.
+   */
+  private void markItemsAboveViewport(Tree tree, TreeItem topVisible) {
+    TreeItem[] roots = tree.getItems();
+    for (TreeItem root : roots) {
+      if (root == topVisible)
+        return;
+
+      Object data = root.getData();
+      if (data instanceof INews) {
+        INews news = (INews) data;
+        if (news.getState() != INews.State.READ && news.isVisible())
+          setNewsState(news, INews.State.READ, false);
+      }
+
+      /* Grouped view  check children of the group node */
+      for (int i = 0; i < root.getItemCount(); i++) {
+        TreeItem child = root.getItem(i);
+        if (child == topVisible)
+          return;
+
+        Object childData = child.getData();
+        if (childData instanceof INews) {
+          INews news = (INews) childData;
+          if (news.getState() != INews.State.READ && news.isVisible())
+            setNewsState(news, INews.State.READ, false);
+        }
+      }
+    }
   }
 
   private void setNewsState(final INews news, final INews.State state, boolean async) {
