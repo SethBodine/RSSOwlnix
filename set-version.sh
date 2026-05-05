@@ -78,13 +78,19 @@ do
 done
 
 # config.ini
-echo "[4/5] Updating config.ini..."
+echo "[4/6] Updating config.ini..."
 sed -i "s/rssowl\.buildId=[0-9]*\.[0-9]*\.[0-9]*/rssowl.buildId=${VERSION}/" \
   "$ROOT/org.rssowl.ui/config.ini"
 echo "  Updated org.rssowl.ui/config.ini"
 
+# Owl.java splash screen version constant
+echo "[5/6] Updating Owl.java..."
+sed -i "s/SPLASH_VERSION = \"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*[-a-zA-Z0-9]*\"/SPLASH_VERSION = \"${DISPLAY_VERSION}\"/" \
+  "$ROOT/org.rssowl.core/src/org/rssowl/core/Owl.java"
+echo "  Updated org.rssowl.core/src/org/rssowl/core/Owl.java"
+
 # plugin.xml About dialog
-echo "[5/5] Updating plugin.xml..."
+echo "[6/6] Updating plugin.xml..."
 sed -i "s/Version: [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*[-a-zA-Z0-9]*/Version: ${DISPLAY_VERSION}/g" \
   "$ROOT/org.rssowl.ui/plugin.xml"
 sed -i "s/Build Id: [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/Build Id: ${BUILD_DATE}/g" \
@@ -97,6 +103,6 @@ echo ""
 echo "Suggested next steps:"
 echo "  git add -A"
 echo "  git commit -m \"chore: bump version to ${DISPLAY_VERSION}\""
-echo "  git tag -a v${VERSION} -m \"Release v${VERSION}\""
+echo "  git tag -a v${DISPLAY_VERSION} -m \"Release v${DISPLAY_VERSION}\""
 echo "  git push origin main --follow-tags"
 
