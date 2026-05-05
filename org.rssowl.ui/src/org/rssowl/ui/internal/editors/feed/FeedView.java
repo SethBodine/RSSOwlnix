@@ -1661,7 +1661,8 @@ public class FeedView extends EditorPart implements IReusableEditor {
       @Override
       protected void runInBackground(IProgressMonitor monitor) {
         fBgMonitor = monitor;
-        if (!monitor.isCanceled())
+        /* Skip the potentially expensive refreshCache if this job is already stale */
+        if (!monitor.isCanceled() && fInputGeneration == generation)
           localContentProvider.refreshCache(monitor, mark);
       }
 
