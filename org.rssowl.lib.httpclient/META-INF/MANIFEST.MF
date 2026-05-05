@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: org.rssowl.lib.httpclient;singleton:=true
-Bundle-Version: 2.10.0.qualifier
+Bundle-Version: 2.10.1.qualifier
 Eclipse-BuddyPolicy: registered
 Bundle-Vendor: %Bundle-Vendor
 Bundle-RequiredExecutionEnvironment: JavaSE-17
