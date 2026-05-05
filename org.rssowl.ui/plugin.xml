@@ -1852,7 +1852,6 @@
 
    </extension>
    <extension
-         point="org.rssowl.ui.FeedSearch">   <extension
          point="org.rssowl.ui.FeedSearch">
       <feedSearch
             id="org.rssowl.ui.DefaultFeedSearch"
