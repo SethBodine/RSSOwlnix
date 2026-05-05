@@ -347,6 +347,18 @@ public class FilterBar {
           }
         });
 
+        /* Search on: Article Body / Description */
+        final MenuItem searchContent = new MenuItem(menu, SWT.RADIO);
+        searchContent.setText(NewsFilter.SearchTarget.CONTENT.getName());
+        searchContent.setSelection(NewsFilter.SearchTarget.CONTENT == filter.getSearchTarget());
+        searchContent.addSelectionListener(new SelectionAdapter() {
+          @Override
+          public void widgetSelected(SelectionEvent e) {
+            if (searchContent.getSelection() && filter.getSearchTarget() != NewsFilter.SearchTarget.CONTENT)
+              doSearch(NewsFilter.SearchTarget.CONTENT);
+          }
+        });
+
         /* Offer to Save as Search */
         INewsMark inputMark = ((FeedViewInput) fFeedView.getEditorInput()).getMark();
         if (inputMark instanceof IBookMark || inputMark instanceof INewsBin || inputMark instanceof FolderNewsMark) {
@@ -719,6 +731,30 @@ public class FilterBar {
           }
         });
 
+        /* Show: Today */
+        final MenuItem showToday = new MenuItem(menu, SWT.RADIO);
+        showToday.setText(NewsFilter.Type.SHOW_TODAY.getName());
+        showToday.setSelection(NewsFilter.Type.SHOW_TODAY == filter.getType());
+        showToday.addSelectionListener(new SelectionAdapter() {
+          @Override
+          public void widgetSelected(SelectionEvent e) {
+            if (showToday.getSelection() && filter.getType() != NewsFilter.Type.SHOW_TODAY)
+              onFilter(NewsFilter.Type.SHOW_TODAY);
+          }
+        });
+
+        /* Show: This Week */
+        final MenuItem showThisWeek = new MenuItem(menu, SWT.RADIO);
+        showThisWeek.setText(NewsFilter.Type.SHOW_THIS_WEEK.getName());
+        showThisWeek.setSelection(NewsFilter.Type.SHOW_THIS_WEEK == filter.getType());
+        showThisWeek.addSelectionListener(new SelectionAdapter() {
+          @Override
+          public void widgetSelected(SelectionEvent e) {
+            if (showThisWeek.getSelection() && filter.getType() != NewsFilter.Type.SHOW_THIS_WEEK)
+              onFilter(NewsFilter.Type.SHOW_THIS_WEEK);
+          }
+        });
+
         /* Offer to Save as Search */
         INewsMark inputMark = ((FeedViewInput) fFeedView.getEditorInput()).getMark();
         if (inputMark instanceof IBookMark || inputMark instanceof INewsBin || inputMark instanceof FolderNewsMark) {
@@ -775,6 +811,16 @@ public class FilterBar {
       case SHOW_LAST_5_DAYS:
         field = factory.createSearchField(INews.AGE_IN_DAYS, INews.class.getName());
         conditions.add(factory.createSearchCondition(field, SearchSpecifier.IS_LESS_THAN, 6));
+        break;
+
+      case SHOW_TODAY:
+        field = factory.createSearchField(INews.AGE_IN_DAYS, INews.class.getName());
+        conditions.add(factory.createSearchCondition(field, SearchSpecifier.IS_LESS_THAN, 1));
+        break;
+
+      case SHOW_THIS_WEEK:
+        field = factory.createSearchField(INews.AGE_IN_DAYS, INews.class.getName());
+        conditions.add(factory.createSearchCondition(field, SearchSpecifier.IS_LESS_THAN, 8));
         break;
 
       case SHOW_STICKY:

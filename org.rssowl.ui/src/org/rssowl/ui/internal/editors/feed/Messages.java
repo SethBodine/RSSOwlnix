@@ -117,6 +117,7 @@ public class Messages extends NLS {
   public static String NewsFilter_ATTACHMENTS;
   public static String NewsFilter_AUTHOR;
   public static String NewsFilter_CATEGORY;
+  public static String NewsFilter_CONTENT;
   public static String NewsFilter_ENTIRE_NEWS;
   public static String NewsFilter_HEADLINE;
   public static String NewsFilter_LABELED_NEWS;
@@ -130,9 +131,13 @@ public class Messages extends NLS {
   public static String NewsFilter_SHOW_NEW;
   public static String NewsFilter_SHOW_RECENT;
   public static String NewsFilter_SHOW_STICKY;
+  public static String NewsFilter_SHOW_THIS_WEEK;
+  public static String NewsFilter_SHOW_TODAY;
   public static String NewsFilter_SHOW_UNREAD;
   public static String NewsFilter_SOURCE;
   public static String NewsFilter_STICKY_NEWS;
+  public static String NewsFilter_THIS_WEEK;
+  public static String NewsFilter_TODAY;
   public static String NewsFilter_UNREAD_NEWS;
   public static String NewsGrouping_BAD;
   public static String NewsGrouping_EARLIER_THIS_WEEK;
@@ -193,3 +198,4 @@ public class Messages extends NLS {
     NLS.initializeMessages(BUNDLE_NAME, Messages.class);
   }
 }
+

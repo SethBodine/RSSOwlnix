@@ -80,6 +80,12 @@ public class NewsFilter extends ViewerFilter {
     /** Show Recent News */
     SHOW_LAST_5_DAYS(Messages.NewsFilter_SHOW_LAST_DAYS, Messages.NewsFilter_LAST_DAYS),
 
+    /** Show news published today (since midnight) */
+    SHOW_TODAY(Messages.NewsFilter_SHOW_TODAY, Messages.NewsFilter_TODAY),
+
+    /** Show news published within the last 7 days */
+    SHOW_THIS_WEEK(Messages.NewsFilter_SHOW_THIS_WEEK, Messages.NewsFilter_THIS_WEEK),
+
     /** Show Labeled News */
     SHOW_LABELED(Messages.NewsFilter_SHOW_LABELED_NEWS, Messages.NewsFilter_LABELED_NEWS);
 
@@ -130,7 +136,10 @@ public class NewsFilter extends ViewerFilter {
     ATTACHMENTS(Messages.NewsFilter_ATTACHMENTS),
 
     /** Search Labels */
-    LABELS(Messages.NewsFilter_LABELS);
+    LABELS(Messages.NewsFilter_LABELS),
+
+    /** Search Article Body / Description */
+    CONTENT(Messages.NewsFilter_CONTENT);
 
     String fName;
 
@@ -312,6 +321,18 @@ public class NewsFilter extends ViewerFilter {
           date = DateUtils.getRecentDate(news);
           isMatch = (date.getTime() >= (DateUtils.getToday().getTimeInMillis() - 5 * DateUtils.DAY));
           break;
+
+        /* Show Today (since midnight) */
+        case SHOW_TODAY:
+          date = DateUtils.getRecentDate(news);
+          isMatch = (date.getTime() >= DateUtils.getToday().getTimeInMillis());
+          break;
+
+        /* Show This Week (last 7 days) */
+        case SHOW_THIS_WEEK:
+          date = DateUtils.getRecentDate(news);
+          isMatch = (date.getTime() >= (DateUtils.getToday().getTimeInMillis() - DateUtils.WEEK));
+          break;
       }
 
       /* Finally check the Pattern */
@@ -469,6 +490,11 @@ public class NewsFilter extends ViewerFilter {
       case LABELS:
         field = fModelFactory.createSearchField(INews.LABEL, INews.class.getName());
         specifier = SearchSpecifier.IS;
+        break;
+
+      case CONTENT:
+        field = fModelFactory.createSearchField(INews.DESCRIPTION, INews.class.getName());
+        specifier = SearchSpecifier.CONTAINS_ALL;
         break;
     }
 
