@@ -482,11 +482,12 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
     fTrayItem.setToolTipText(Owl.APPLICATION_NAME);
     fTrayEnabled = true;
 
+    /* Apply Image before hiding  on Windows, setImage() after setVisible(false)
+     * can force the icon visible again */
+    fTrayItem.setImage(OwlUI.getImage(fResources, OwlUI.TRAY_OWL));
+
     if (Application.IS_WINDOWS)
       fTrayItem.setVisible(false);
-
-    /* Apply Image */
-    fTrayItem.setImage(OwlUI.getImage(fResources, OwlUI.TRAY_OWL));
 
     /* Recover tray icon when Windows Explorer crashes and restarts */
     fTrayItem.addListener(SWT.Dispose, new Listener() {
