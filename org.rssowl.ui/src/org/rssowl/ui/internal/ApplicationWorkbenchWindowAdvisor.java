@@ -486,8 +486,22 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
      * can force the icon visible again */
     fTrayItem.setImage(OwlUI.getImage(fResources, OwlUI.TRAY_OWL));
 
-    if (Application.IS_WINDOWS)
-      fTrayItem.setVisible(false);
+    /*
+     * On Windows 11, new TrayItem() makes the icon appear immediately.
+     * setVisible(false) called synchronously in the same event loop tick is
+     * not always honoured before the shell paints. Deferring with asyncExec
+     * ensures it runs after the OS has processed the tray item creation.
+     */
+    if (Application.IS_WINDOWS) {
+      final TrayItem itemToHide = fTrayItem;
+      shell.getDisplay().asyncExec(new Runnable() {
+        @Override
+        public void run() {
+          if (itemToHide != null && !itemToHide.isDisposed())
+            itemToHide.setVisible(false);
+        }
+      });
+    }
 
     /* Recover tray icon when Windows Explorer crashes and restarts */
     fTrayItem.addListener(SWT.Dispose, new Listener() {
