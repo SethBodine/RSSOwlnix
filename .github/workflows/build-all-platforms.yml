@@ -10,38 +10,39 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Build (${{ matrix.name }})
-    runs-on: ubuntu-latest   # Tycho cross-compiles all platforms from Linux
+    runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false       # Let other platforms finish even if one fails
+      fail-fast: false
       matrix:
         include:
           - name: Windows x64
             environment: win32,win32,x86_64
             artifact_name: RSSOwlnix-Windows-x64
-            zip_pattern: "*win32*.zip"
+            zip_pattern: RSSOwlnix-win32.win32.x86_64.zip
 
           - name: Linux x64
             environment: linux,gtk,x86_64
             artifact_name: RSSOwlnix-Linux-x64
-            zip_pattern: "*linux*.zip"
+            zip_pattern: RSSOwlnix-linux.gtk.x86_64.zip
 
           - name: macOS x64
             environment: macosx,cocoa,x86_64
             artifact_name: RSSOwlnix-macOS-x64
-            zip_pattern: "*macosx*.zip"
+            zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.zip
 
     steps:
-      #  Checkout 
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      #  Java 
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
@@ -49,7 +50,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      #  Cache Eclipse p2 artifacts 
       - name: Cache Tycho p2 repository
         uses: actions/cache@v5
         with:
@@ -58,7 +58,6 @@ jobs:
           restore-keys: |
             tycho-p2-
 
-      #  Build 
       - name: Build with Maven/Tycho
         run: |
           for attempt in 1 2 3; do
@@ -81,21 +80,19 @@ jobs:
         env:
           MAVEN_OPTS: "-Xmx2g -XX:+UseParallelGC"
 
-      #  Locate ZIP 
       - name: Find ZIP artifact
         id: find_zip
         run: |
           ZIP=$(find releng/product/target/products -name "${{ matrix.zip_pattern }}" | head -1)
           if [ -z "$ZIP" ]; then
-            echo "ERROR: no ZIP matching ${{ matrix.zip_pattern }} found"
-            find releng/product/target -name "*.zip" || true
+            echo "ERROR: ${{ matrix.zip_pattern }} not found under releng/product/target/products"
+            echo "Files present:"
+            find releng/product/target/products -name "*.zip" || echo "(none)"
             exit 1
           fi
           echo "zip_path=$ZIP" >> "$GITHUB_OUTPUT"
-          echo "zip_name=$(basename $ZIP)" >> "$GITHUB_OUTPUT"
           echo "Found: $ZIP"
 
-      #  Upload artifact 
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v5
         with:
@@ -104,7 +101,6 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  #  Release job  runs after all builds succeed 
   release:
     name: Create GitHub Release
     needs: build
