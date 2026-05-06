@@ -176,4 +176,16 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor {
 
     return res[0];
   }
+
+  /*
+   * Called after the workbench has shut down. Forces a clean JVM exit to
+   * prevent non-daemon threads (db4o background tasks, Lucene index threads,
+   * HTTP client pools) from keeping the JVM alive as an orphaned process.
+   * Without this, closing the window leaves javaw.exe running, and the next
+   * launch finds the port bound and the database locked causing a 2-minute delay.
+   */
+  @Override
+  public void postShutdown() {
+    System.exit(0);
+  }
 }
