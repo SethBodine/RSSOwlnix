@@ -102,7 +102,7 @@ jobs:
           echo "Found: $ZIP"
 
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ steps.find_zip.outputs.zip_path }}
