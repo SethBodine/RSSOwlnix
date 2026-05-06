@@ -266,7 +266,13 @@ public class DBManager {
         }
       }
 
-      /* Open the DB */
+      /* Open the DB  this can be slow with large databases, so begin a long
+       * operation here so the progress dialog opens and the splash does not
+       * appear frozen during a normal (non-defrag, non-migration) startup. */
+      if (!progressMonitor.isLongOperationRunning()) {
+        progressMonitor.beginLongOperation(false);
+        subMonitor = SubMonitor.convert(progressMonitor, Messages.DBManager_LOADING_DATABASE, 1);
+      }
       Configuration config = createConfiguration(false);
       createObjectContainer(config, forRestore);
 

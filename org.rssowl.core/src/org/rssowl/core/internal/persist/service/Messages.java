@@ -33,6 +33,7 @@ public class Messages extends NLS {
   public static String DBManager_DISK_FULL_ERROR;
   public static String DBManager_FILE_PERMISSION_ERROR;
   public static String DBManager_IMPROVING_APP_PERFORMANCE;
+  public static String DBManager_LOADING_DATABASE;
   public static String DBManager_OPTIMIZING_NEWSFEEDS;
   public static String DBManager_PROGRESS_WAIT;
   public static String DBManager_RSSOWL_MIGRATION;
@@ -46,3 +47,4 @@ public class Messages extends NLS {
     NLS.initializeMessages(BUNDLE_NAME, Messages.class);
   }
 }
+
