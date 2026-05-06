@@ -48,6 +48,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
@@ -339,16 +340,28 @@ public class Activator extends AbstractUIPlugin {
 
   /* Server already running. Pass a message to the running Server and exit. */
   private void doHandshake(String message) {
-    try (Socket socket = new Socket(InetAddress.getByName(ApplicationServer.LOCALHOST), ApplicationServer.DEFAULT_SOCKET_PORT)) {
+
+    /*
+     * Use getLoopbackAddress() rather than getByName("127.0.0.1") to avoid a
+     * reverse DNS lookup which can block for up to 2 minutes on Windows when
+     * a VPN, corporate DNS, or Windows Defender intercepts loopback traffic.
+     *
+     * Use an explicit connect timeout so that if the orphaned process has the
+     * port bound in a zombie TCP state (process died mid-run, socket in
+     * TIME_WAIT), we fail fast rather than waiting for the OS TCP timeout.
+     */
+    Socket socket = new Socket();
+    try {
+      socket.connect(
+          new InetSocketAddress(InetAddress.getLoopbackAddress(), ApplicationServer.DEFAULT_SOCKET_PORT),
+          5000);
       PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
       writer.println(isSet(message) ? message : ApplicationServer.STARTUP_HANDSHAKE);
       writer.flush();
 
       /*
-       * Send a message to the other running instance of RSSOwl and wait some
-       * time, so that is has a chance to read the message. After that, the
-       * other running instance will restore from taskbar or tray to show the
-       * user. Then exit this instance consequently.
+       * Give the running instance a moment to process the handshake and
+       * restore its window, then exit this duplicate instance.
        */
       try {
         Thread.sleep(200);
@@ -361,7 +374,19 @@ public class Activator extends AbstractUIPlugin {
     } catch (UnknownHostException e) {
       logError(Messages.Activator_ERROR_STARTUP, e);
     } catch (IOException e) {
-      logError(Messages.Activator_ERROR_STARTUP, e);
+      /*
+       * Connection failed or timed out  the port is bound by a zombie
+       * process that can no longer accept connections. Log and allow startup
+       * to continue; the application will fail gracefully on the db4o lock
+       * rather than hanging silently for 2 minutes.
+       */
+      safeLogInfo(Owl.APPLICATION_NAME + " Handshake failed (zombie process?): " + e.getMessage() + fNl); //$NON-NLS-1$
+    } finally {
+      try {
+        socket.close();
+      } catch (IOException e) {
+        /* Ignore */
+      }
     }
   }
 
