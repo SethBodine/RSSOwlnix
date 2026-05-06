@@ -69,6 +69,9 @@ import org.rssowl.ui.internal.OwlUI;
 import org.rssowl.ui.internal.OwlUI.Layout;
 import org.rssowl.ui.internal.util.LayoutUtils;
 import org.rssowl.ui.internal.util.MBrowserEmbedded;
+import org.rssowl.core.persist.dao.INewsDAO;
+import org.rssowl.core.persist.dao.OwlDAO;
+import org.eclipse.swt.widgets.Display;
 
 /**
  * Part of the FeedView to display News in a BrowserViewer.
@@ -324,6 +327,38 @@ public class NewsBrowserControl implements IFeedViewPart {
     /* Remember as initial Input */
     fInitialInput = fViewer.getInput();
     fInputSet = true;
+
+    /*
+     * Single-item mark-as-read: when exactly one news item is displayed in
+     * the browser and there is no table scrollbar (i.e. the whole feed fits
+     * in the viewport), the table-based scroll/gesture listeners never fire
+     * because there is nothing to scroll. Mark the item read here, using the
+     * same delay the user has configured for the table, so the behaviour is
+     * consistent regardless of how many items the feed contains.
+     */
+    if (input instanceof INews) {
+      final INews news = (INews) input;
+      if (news.getState() != INews.State.READ && fInputPreferences != null
+          && fInputPreferences.getBoolean(DefaultPreferences.MARK_READ_STATE)) {
+
+        final int delayMs = fInputPreferences.getInteger(DefaultPreferences.MARK_READ_IN_MILLIS);
+        final INewsDAO newsDao = OwlDAO.getDAO(INewsDAO.class);
+        final Display display = fViewer.getControl().getDisplay();
+
+        display.timerExec(Math.max(delayMs, 0), new Runnable() {
+          @Override
+          public void run() {
+            if (display.isDisposed())
+              return;
+            /* Re-check state in case the user manually toggled it during the delay */
+            if (news.getState() != INews.State.READ) {
+              boolean affectDuplicates = OwlUI.markReadDuplicates();
+              newsDao.setState(news, INews.State.READ, affectDuplicates, false);
+            }
+          }
+        });
+      }
+    }
   }
 
   private Pair<? /* Input from News */, Boolean /* Block External Navigation */> getInput(Object obj) {
