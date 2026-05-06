@@ -25,7 +25,7 @@ http://www.rssowl.org/legal/epl-v10.html
    </configIni>
 
    <launcherArgs>
-      <vmArgs>-Xms1i28m -Xmx192m -Dosgi.requiredJavaVersion=17 -Djava.util.Arrays.useLegacyMergeSort=true
+      <vmArgs>-Xms128m -Xmx192m -Dosgi.requiredJavaVersion=17 -Djava.util.Arrays.useLegacyMergeSort=true
 --add-opens=java.base/java.lang=ALL-UNNAMED
 --add-opens=java.base/java.util=ALL-UNNAMED
 --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
