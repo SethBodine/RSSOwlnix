@@ -69,6 +69,7 @@ import org.rssowl.ui.internal.OwlUI;
 import org.rssowl.ui.internal.OwlUI.Layout;
 import org.rssowl.ui.internal.util.LayoutUtils;
 import org.rssowl.ui.internal.util.MBrowserEmbedded;
+import java.util.Collections;
 import org.rssowl.core.persist.dao.INewsDAO;
 import org.rssowl.core.persist.dao.OwlDAO;
 import org.eclipse.swt.widgets.Display;
@@ -353,7 +354,7 @@ public class NewsBrowserControl implements IFeedViewPart {
             /* Re-check state in case the user manually toggled it during the delay */
             if (news.getState() != INews.State.READ) {
               boolean affectDuplicates = OwlUI.markReadDuplicates();
-              newsDao.setState(news, INews.State.READ, affectDuplicates, false);
+              newsDao.setState(Collections.singleton(news), INews.State.READ, affectDuplicates, false);
             }
           }
         });
