@@ -166,6 +166,9 @@ public class DBManager {
   private static final int DEFRAG_SUB_WORK_FINISH = 100000; //1%
 
   private ObjectContainer fObjectContainer;
+
+  /** JVM shutdown hook ensuring db4o releases its file lock on any JVM exit. */
+  private Thread fShutdownHook;
   private final AtomicLong fNextOnlineBackup = new AtomicLong();
   private final ReadWriteLock fLock = new ReentrantReadWriteLock();
   private final List<DatabaseListener> fEntityStoreListeners = new CopyOnWriteArrayList<>();
@@ -278,6 +281,33 @@ public class DBManager {
 
       /* Notify Listeners that DB is opened */
       fireDatabaseEvent(new DatabaseEvent(fObjectContainer, fLock), true);
+
+      /*
+       * Register a JVM shutdown hook that closes db4o on any JVM exit 
+       * including Task Manager kills, OS shutdown while minimised to tray,
+       * or non-daemon threads preventing a clean exit. Without this, db4o's
+       * file lock survives the process, causing the next Db4o.openFile() call
+       * to retry for ~2 minutes waiting for the lock to clear.
+       * config.automaticShutDown(false) disables db4o's own hook, so we
+       * register an equivalent here that respects our own write lock.
+       */
+      fShutdownHook = new Thread("db4o-shutdown-hook") { //$NON-NLS-1$
+        @Override
+        public void run() {
+          try {
+            fLock.writeLock().lock();
+            try {
+              if (fObjectContainer != null && !fObjectContainer.ext().isClosed())
+                while (!fObjectContainer.close());
+            } finally {
+              fLock.writeLock().unlock();
+            }
+          } catch (Throwable t) {
+            /* Best-effort only  we are inside a shutdown hook */
+          }
+        }
+      };
+      Runtime.getRuntime().addShutdownHook(fShutdownHook);
 
       /*
        * Model Search Reindex or Cleanup only applies to non-emergency
@@ -1460,6 +1490,16 @@ public class DBManager {
    * contributed DataBase.
    */
   public void shutdown() throws PersistenceException {
+    /* Deregister the shutdown hook  we are closing cleanly right now */
+    if (fShutdownHook != null) {
+      try {
+        Runtime.getRuntime().removeShutdownHook(fShutdownHook);
+      } catch (IllegalStateException e) {
+        /* JVM already shutting down  hook is running concurrently, ignore */
+      }
+      fShutdownHook = null;
+    }
+
     fLock.writeLock().lock();
     try {
       fireDatabaseEvent(new DatabaseEvent(fObjectContainer, fLock), false);
