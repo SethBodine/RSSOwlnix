@@ -30,12 +30,12 @@ jobs:
           - name: Linux x64
             environment: linux,gtk,x86_64
             artifact_name: RSSOwlnix-Linux-x64
-            zip_pattern: RSSOwlnix-linux.gtk.x86_64.zip
+            zip_pattern: RSSOwlnix-linux.gtk.x86_64.tar.gz
 
           - name: macOS x64
             environment: macosx,cocoa,x86_64
             artifact_name: RSSOwlnix-macOS-x64
-            zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.zip
+            zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.tar.gz
 
     steps:
       - name: Checkout repository
