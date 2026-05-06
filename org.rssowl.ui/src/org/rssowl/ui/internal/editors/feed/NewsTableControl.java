@@ -1169,24 +1169,43 @@ public class NewsTableControl implements IFeedViewPart {
 
         /* Find the first news item (may be inside a group) */
         TreeItem[] roots = tree.getItems();
+        TreeItem toSelect = null;
+        outer:
         for (TreeItem root : roots) {
-          Object data = root.getData();
-          if (data instanceof INews) {
-            tree.select(root);
-            tree.notifyListeners(SWT.Selection, new Event());
-            return;
+          if (root.getData() instanceof INews) {
+            toSelect = root;
+            break;
           }
-
-          /* Grouped view  look inside the group node */
           for (int i = 0; i < root.getItemCount(); i++) {
             TreeItem child = root.getItem(i);
             if (child.getData() instanceof INews) {
-              tree.select(child);
-              tree.notifyListeners(SWT.Selection, new Event());
-              return;
+              toSelect = child;
+              break outer;
             }
           }
         }
+
+        if (toSelect == null)
+          return;
+
+        final TreeItem finalItem = toSelect;
+
+        /*
+         * fBlockNewsStateTracker is true during input loading and cleared after
+         * ~200ms via JobRunner.runDelayedFlagInversion. If we fire the selection
+         * event synchronously here, onSelectionChanged returns immediately at
+         * the block-flag check and the mark-read tracker never runs.
+         * Delay by 300ms to ensure the flag has cleared before we notify.
+         */
+        tree.getDisplay().timerExec(300, new Runnable() {
+          @Override
+          public void run() {
+            if (tree.isDisposed() || finalItem.isDisposed())
+              return;
+            tree.select(finalItem);
+            tree.notifyListeners(SWT.Selection, new Event());
+          }
+        });
       }
     });
   }
