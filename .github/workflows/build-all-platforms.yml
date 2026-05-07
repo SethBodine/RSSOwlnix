@@ -16,23 +16,26 @@ env:
 jobs:
   build:
     name: Build (${{ matrix.name }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Windows x64
+            os: windows-latest
             environment: win32,win32,x86_64
             artifact_name: RSSOwlnix-Windows-x64
             zip_pattern: RSSOwlnix-win32.win32.x86_64.zip
 
           - name: Linux x64
+            os: ubuntu-latest
             environment: linux,gtk,x86_64
             artifact_name: RSSOwlnix-Linux-x64
             zip_pattern: RSSOwlnix-linux.gtk.x86_64.tar.gz
 
           - name: macOS x64
+            os: ubuntu-latest
             environment: macosx,cocoa,x86_64
             artifact_name: RSSOwlnix-macOS-x64
             zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.tar.gz
@@ -59,6 +62,7 @@ jobs:
             tycho-p2-
 
       - name: Build with Maven/Tycho
+        shell: bash
         run: |
           for attempt in 1 2 3; do
             echo "=== Build attempt $attempt for ${{ matrix.name }} ==="
@@ -82,27 +86,31 @@ jobs:
 
       - name: List produced artifacts (debug)
         if: always()
+        shell: bash
         run: |
           echo "=== Contents of releng/product/target/products ==="
           find releng/product/target/products -type f | sort || echo "(directory not found)"
           echo "=== All ZIPs under releng/product/target ==="
-          find releng/product/target -name "*.zip" | sort || echo "(none found)"
+          find releng/product/target -name "*.zip" -o -name "*.tar.gz" | sort || echo "(none found)"
 
       - name: Find ZIP artifact
         id: find_zip
+        shell: bash
         run: |
           ZIP=$(find releng/product/target/products -name "${{ matrix.zip_pattern }}" | head -1)
           if [ -z "$ZIP" ]; then
             echo "ERROR: ${{ matrix.zip_pattern }} not found under releng/product/target/products"
             echo "Files present:"
-            find releng/product/target/products -name "*.zip" || echo "(none)"
+            find releng/product/target/products -name "*.zip" -o -name "*.tar.gz" || echo "(none)"
             exit 1
           fi
           echo "zip_path=$ZIP" >> "$GITHUB_OUTPUT"
           echo "Found: $ZIP"
 
+
+
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ steps.find_zip.outputs.zip_path }}
@@ -124,7 +132,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*.zip
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
