@@ -16,29 +16,26 @@ env:
 jobs:
   build:
     name: Build (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Windows x64
-            os: windows-latest
             environment: win32,win32,x86_64
             artifact_name: RSSOwlnix-Windows-x64
             zip_pattern: RSSOwlnix-win32.win32.x86_64.zip
 
           - name: Linux x64
-            os: ubuntu-latest
             environment: linux,gtk,x86_64
             artifact_name: RSSOwlnix-Linux-x64
-            zip_pattern: RSSOwlnix-linux.gtk.x86_64.zip
+            zip_pattern: RSSOwlnix-linux.gtk.x86_64.tar.gz
 
           - name: macOS x64
-            os: ubuntu-latest
             environment: macosx,cocoa,x86_64
             artifact_name: RSSOwlnix-macOS-x64
-            zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.zip
+            zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.tar.gz
 
     steps:
       - name: Checkout repository
@@ -62,7 +59,6 @@ jobs:
             tycho-p2-
 
       - name: Build with Maven/Tycho
-        shell: bash
         run: |
           for attempt in 1 2 3; do
             echo "=== Build attempt $attempt for ${{ matrix.name }} ==="
@@ -86,7 +82,6 @@ jobs:
 
       - name: List produced artifacts (debug)
         if: always()
-        shell: bash
         run: |
           echo "=== Contents of releng/product/target/products ==="
           find releng/product/target/products -type f | sort || echo "(directory not found)"
@@ -95,7 +90,6 @@ jobs:
 
       - name: Find ZIP artifact
         id: find_zip
-        shell: bash
         run: |
           ZIP=$(find releng/product/target/products -name "${{ matrix.zip_pattern }}" | head -1)
           if [ -z "$ZIP" ]; then
@@ -107,55 +101,8 @@ jobs:
           echo "zip_path=$ZIP" >> "$GITHUB_OUTPUT"
           echo "Found: $ZIP"
 
-      - name: Bundle domain startup fix into Windows ZIP
-        if: matrix.name == 'Windows x64'
-        shell: bash
-        run: |
-          ARCHIVE="${{ steps.find_archive.outputs.archive_path }}"
-          # Extract, add the .reg file, repack
-          TMPDIR=$(mktemp -d)
-          unzip -q "$ARCHIVE" -d "$TMPDIR"
-          cp tools/fix-domain-startup.reg "$TMPDIR/"
-          cd "$TMPDIR"
-          zip -qr "$OLDPWD/$ARCHIVE" .
-          cd "$OLDPWD"
-          rm -rf "$TMPDIR"
-          echo "Bundled fix-domain-startup.reg into Windows ZIP"
-
-      - name: Bundle JRE and pin -vm in RSSOwlnix.ini (Windows only)
-        if: matrix.name == 'Windows x64'
-        shell: bash
-        run: |
-          ARCHIVE="${{ steps.find_archive.outputs.archive_path }}"
-          TMPDIR=$(mktemp -d)
-          unzip -q "$ARCHIVE" -d "$TMPDIR"
-
-          # Download Eclipse Temurin JRE 17 LTS for Windows x64
-          JRE_URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.14%2B7/OpenJDK17U-jre_x64_windows_hotspot_17.0.14_7.zip"
-          echo "Downloading Temurin JRE 17..."
-          curl -sL "$JRE_URL" -o /tmp/jre.zip
-          mkdir -p "$TMPDIR/RSSOwlnix/jre"
-          unzip -q /tmp/jre.zip -d /tmp/jre_extract
-          JRE_ROOT=$(find /tmp/jre_extract -maxdepth 1 -mindepth 1 -type d | head -1)
-          cp -r "$JRE_ROOT/"* "$TMPDIR/RSSOwlnix/jre/"
-
-          # Patch RSSOwlnix.ini - insert -vm before -vmargs
-          INI="$TMPDIR/RSSOwlnix/RSSOwlnix.ini"
-          if [ -f "$INI" ]; then
-            sed -i 's/-vmargs/-vm\njre\/bin\/javaw.exe\n-vmargs/' "$INI"
-            echo "Patched $INI"
-          else
-            echo "WARNING: ini not found, searching..."
-            find "$TMPDIR" -name "*.ini" | head -5
-          fi
-
-          # Repack
-          cd "$TMPDIR" && zip -qr "$OLDPWD/$ARCHIVE" . && cd "$OLDPWD"
-          rm -rf "$TMPDIR" /tmp/jre.zip /tmp/jre_extract
-          echo "JRE bundled and -vm pinned"
-
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ steps.find_zip.outputs.zip_path }}
