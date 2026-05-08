@@ -102,6 +102,22 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      - name: Upload P2 nls site artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: p2-nls-site
+          path: releng/update-nls/target/repository/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload P2 addons site artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: p2-addons-site
+          path: releng/update-addons/target/repository/
+          retention-days: 30
+          if-no-files-found: error
+
   release:
     name: Create GitHub Release
     needs: build
@@ -110,7 +126,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -134,18 +150,46 @@ jobs:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - name: Download P2 site artifact
-        uses: actions/download-artifact@v5
+      - name: Download P2 program site artifact
+        uses: actions/download-artifact@v4
         with:
           name: p2-update-site
-          path: p2-site
+          path: p2-program
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Download P2 nls site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: p2-nls-site
+          path: p2-nls
+
+      - name: Download P2 addons site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: p2-addons-site
+          path: p2-addons
+
+      - name: Deploy program update site to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: p2-site
+          publish_dir: p2-program
           destination_dir: update/program
+          keep_files: true
+
+      - name: Deploy nls update site to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: p2-nls
+          destination_dir: update/nls
+          keep_files: true
+
+      - name: Deploy addons update site to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: p2-addons
+          destination_dir: update/addons
           keep_files: true
 
 
