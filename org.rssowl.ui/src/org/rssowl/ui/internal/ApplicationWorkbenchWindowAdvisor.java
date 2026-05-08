@@ -214,11 +214,21 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
   /* Calls safely into a patched version of JFaces Window class to block shell opening once */
   private void blockShellOpen(IWorkbenchWindow window) {
     try {
+      /* First try the legacy patched JFace method (pre-Eclipse 4.x) */
       Method method = window.getClass().getMethod("blockShellOpenOnce"); //$NON-NLS-1$
       if (method != null)
         method.invoke(window);
     } catch (Exception e) {
-      /* Ignore Silently */
+      /* Legacy method not available (Eclipse 4.x+): hide the shell directly before
+       * it becomes visible so there is no flash. postWindowOpen() will move it to
+       * the tray once the tray icon has been created. */
+      try {
+        Shell shell = window.getShell();
+        if (shell != null && !shell.isDisposed())
+          shell.setVisible(false);
+      } catch (Exception ex) {
+        /* Ignore - worst case the window appears briefly before moving to tray */
+      }
     }
   }
 
@@ -941,3 +951,4 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
       showTrayMenu(shell);
   }
 }
+
