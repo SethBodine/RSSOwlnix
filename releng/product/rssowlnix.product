@@ -85,7 +85,7 @@ RSSOwl Development Team - initial API and implementation
    <repositories>
       <repository location="https://SethBodine.github.io/RSSOwlnix/update/program" name="RSSOwlnix Updates" enabled="true" />
       <repository location="https://SethBodine.github.io/RSSOwlnix/update/nls" name="RSSOwlnix Language Packs" enabled="true" />
-      <repository location="https://SethBodine.github.io/RSSOwlnix/update/addons" name="RSSOwlnix Addons" enabled="true" />
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/addons" name="RSSOwlnix Add-ons" enabled="true" />
    </repositories>
 
    <preferencesInfo>
