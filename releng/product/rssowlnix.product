@@ -83,9 +83,9 @@ RSSOwl Development Team - initial API and implementation
 
 
    <repositories>
-      <repository location="https://xyrio.github.io/RSSOwlnix-site/p2/addons" name="" enabled="true" />
-      <repository location="https://xyrio.github.io/RSSOwlnix-site/p2/nls" name="" enabled="true" />
-      <repository location="https://xyrio.github.io/RSSOwlnix-site/p2/program" name="" enabled="true" />
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/program" name="RSSOwlnix Updates" enabled="true" />
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/nls" name="RSSOwlnix Language Packs" enabled="true" />
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/addons" name="RSSOwlnix Addons" enabled="true" />
    </repositories>
 
    <preferencesInfo>
@@ -96,3 +96,4 @@ RSSOwl Development Team - initial API and implementation
    </cssInfo>
 
 </product>
+
