@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -151,19 +151,19 @@ jobs:
 
     steps:
       - name: Download P2 program site artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: p2-update-site
           path: p2-program
 
       - name: Download P2 nls site artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: p2-nls-site
           path: p2-nls
 
       - name: Download P2 addons site artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: p2-addons-site
           path: p2-addons
