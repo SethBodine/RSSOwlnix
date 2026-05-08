@@ -1,5 +1,107 @@
 # Changelog
 
+## [Unreleased]
+
+Nothing currently pending.
+
+---
+
+## [2.10.2-beta] - 2026-05-08
+
+### Bug Fixes
+
+- **Lucene `maxClauseCount` error dialog on startup** (#142)
+  An error dialog was shown on first launch for users with many feeds because
+  `BooleanQuery.setMaxClauseCount()` was only called reactively after a
+  `TooManyClauses` exception was thrown during the first search. The limit is
+  now set proactively in `ModelSearchImpl.startup()` before the index is opened,
+  so the exception never occurs and the dialog is never shown.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java`
+
+- **Toolbar separator causes buttons to disappear** (#180)
+  When separators were present in the main toolbar, all buttons after the first
+  separator were hidden after editing. The cause was that empty `ToolBarManager`
+  segments  created when a separator appeared at the start of the list or
+  immediately after another separator  were being added to the coolbar and
+  consuming layout space without rendering, which clipped subsequent segments.
+  Empty toolbar segments are now skipped before being committed to the coolbar.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/CoolBarAdvisor.java`
+
+- **App not starting minimised to tray on JRE 17/21** (#158)
+  The `TRAY_ON_START` preference had no effect on Eclipse 4.x builds because
+  it relied on a patched `blockShellOpenOnce()` method on JFace's `Window`
+  class that no longer exists. The reflection call silently failed, leaving
+  the window fully visible on startup. The fallback now hides the shell
+  directly before it becomes visible; `postWindowOpen()` then moves it to the
+  tray once the tray icon is ready, with no visible flash.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java`
+
+### Security
+
+- **Fix command injection in browser launch calls** (CodeQL #3 #4 #5 #6 #7  Critical, CWE-78)
+  All five `Runtime.getRuntime().exec(String)` calls in `BrowserUtils.java` that
+  concatenated a URL from an RSS feed directly into a shell command string have
+  been replaced with the `exec(String[])` array form. Each array element is
+  passed literally to the OS without shell interpretation, preventing a malicious
+  URL from injecting shell metacharacters to execute arbitrary commands.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/util/BrowserUtils.java`
+
+- **Replace broken MD5 digest with SHA-512 for master password key derivation** (CodeQL #1  High, CWE-327)
+  MD5 was used to derive an internal encryption key from the user's master
+  password before passing it to Equinox secure storage. MD5 is cryptographically
+  broken and trivially brute-forceable. Replaced with SHA-512, which is a
+  mandatory JVM algorithm and a drop-in replacement with no API changes required.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/DefaultPasswordProvider.java`
+
+  >  **Migration note:** Users who protect feed credentials with a master
+  > password will find saved credentials unreadable after this update, as the
+  > derived key changes. They will be prompted to re-enter feed passwords once.
+  > To avoid disruption, go to **Preferences  Credentials  Reset** before
+  > upgrading. Users relying on OS-level storage (Windows DPAPI / macOS
+  > Keychain) are unaffected.
+
+- **Prevent path traversal via crafted socket message in ApplicationServer** (CodeQL #2  High, CWE-22)
+  The resource path parameter extracted from incoming local socket messages was
+  passed directly to `getResourceAsStream()` without validation, allowing a
+  crafted message containing `../` sequences to read arbitrary classpath
+  resources. A guard now rejects any parameter that contains `..`, contains a
+  backslash, or does not begin with `/`.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationServer.java`
+
+### Build & CI
+
+- **Linux-only unified build workflow**
+  The multi-platform matrix build has been consolidated to a single Linux runner
+  using Tycho cross-compilation, producing Windows, Linux and macOS ZIPs from
+  one job. The now-redundant `build-windows.yml` workflow has been removed.
+  `.github/workflows/build-all-platforms.yml`
+
+- **P2 update site on GitHub Pages** (#165)
+  The in-app update site (`Help  Check for Updates`) is now built by CI and
+  published automatically on every push to `main`. All three update channels are
+  live  program updates, language packs (empty, ready for future use) and
+  add-ons (empty, ready for future use)  eliminating the missing repository
+  errors previously shown on startup. All Xyrio upstream URLs have been replaced
+  across `rssowlnix.product`, both `feature.xml` variants and `category.xml`.
+  HTTPS is required for all P2 transport connections; redirects are followed
+  provided TLS certificate verification passes; HTTP downgrade redirects are
+  blocked.
+
+  | Channel | URL |
+  |---------|-----|
+  | Program updates | `https://SethBodine.github.io/RSSOwlnix/update/program` |
+  | Language packs  | `https://SethBodine.github.io/RSSOwlnix/update/nls`     |
+  | Add-ons         | `https://SethBodine.github.io/RSSOwlnix/update/addons`  |
+
+- **CodeQL workflow updated to current action versions**
+  Upgraded from `codeql-action/init@v2` (Node 16) to `v3` (Node 24), replaced
+  the autobuild step with an explicit Maven/Tycho build matching the main CI
+  workflow, and enabled the `security-extended` query suite. Node.js 20
+  deprecation warnings resolved across all workflows.
+  `.github/workflows/codeql.yml`
+
+---
+
 ## [2.10.1] - 2025-05-05
 
 ### Bug Fixes
@@ -172,3 +274,4 @@
 - fixed 2 (maybe) memory leaks
 
 based on RSSOwl 2.2.1
+
