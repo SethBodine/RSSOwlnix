@@ -15,7 +15,10 @@
 <!-- 		<module>org.rssowl.libs.p2</module> -->
 		<module>target_platform</module>
 		<module>product</module>
- 		<module>update</module> 
+ 		<module>update</module>
+		<module>update-nls</module>
+		<module>update-addons</module>
 	</modules>
 
 </project>
+
