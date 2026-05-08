@@ -616,9 +616,10 @@ public class CoolBarAdvisor {
         final CoolBarItem item = CoolBarItem.values()[id];
         if (item != null) {
 
-          /* Separator: Start a new Toolbar */
+          /* Separator: Start a new Toolbar - only commit if non-empty */
           if (item == CoolBarItem.SEPARATOR) {
-            fManager.add(new ToolBarContributionItem(currentToolBar));
+            if (currentToolBar.getSize() > 0)
+              fManager.add(new ToolBarContributionItem(currentToolBar));
             currentToolBar = new ToolBarManager(styleSWT);
           }
 
