@@ -26,6 +26,8 @@
  **  **********************************************************************  */
 
 package org.rssowl.ui.internal;
+
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.core.runtime.Status;
