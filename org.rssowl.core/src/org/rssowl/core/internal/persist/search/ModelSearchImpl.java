@@ -110,6 +110,10 @@ public class ModelSearchImpl implements IModelSearch {
 
   private void startup(boolean clearIndex) throws PersistenceException {
     try {
+      /* Set proactively so the first wildcard search never throws TooManyClauses */
+      if (BooleanQuery.getMaxClauseCount() < MAX_CLAUSE_COUNT)
+        BooleanQuery.setMaxClauseCount(MAX_CLAUSE_COUNT);
+
       if (fDirectory == null) {
         String path = Activator.getDefault().getStateLocation().toOSString();
 
