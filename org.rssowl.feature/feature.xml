@@ -3,7 +3,7 @@
       id="org.rssowl"
       label="RSSOwlnix"
       version="2.10.1.qualifier"
-      provider-name="https://github.com/Xyrio/RSSOwlnix"
+      provider-name="https://github.com/SethBodine/RSSOwlnix"
       plugin="org.rssowl.ui">
 
    <description>
@@ -230,7 +230,7 @@ litigation.
    </license>
 
    <url>
-      <update label="https://github.com/Xyrio/RSSOwlnix" url="https://xyrio.github.io/RSSOwlnix-site/update/program/"/>
+      <update label="https://github.com/SethBodine/RSSOwlnix" url="https://SethBodine.github.io/RSSOwlnix/update/program/"/>
    </url>
 
    <requires>
@@ -292,3 +292,4 @@ litigation.
          unpack="false"/>
 
 </feature>
+

@@ -3,7 +3,7 @@
       id="org.rssowl.eclipse"
       label="RSSOwlnix in Eclipse"
       version="2.10.1.qualifier"
-      provider-name="https://github.com/Xyrio/RSSOwlnix"
+      provider-name="https://github.com/SethBodine/RSSOwlnix"
       plugin="org.rssowl.ui">
 
    <description url="http://www.rssowl.org/overview">
@@ -230,7 +230,7 @@ litigation.
    </license>
 
    <url>
-      <update label="https://github.com/Xyrio/RSSOwlnix" url="https://xyrio.github.io/RSSOwlnix/update/eclipse/"/>
+      <update label="https://github.com/SethBodine/RSSOwlnix" url="https://SethBodine.github.io/RSSOwlnix/update/program/"/>
    </url>
 
    <includes
@@ -285,3 +285,4 @@ litigation.
          version="0.0.0"/>
 
 </feature>
+
