@@ -10,5 +10,6 @@
       <category name="rssowlnix.program"/>
    </feature>
    <category-def name="rssowlnix.program" label="RSSOwlnix Update"/>
-   <repository-reference location="https://xyrio.github.io/RSSOwlnix-site/p2/program" enabled="true" />
+   <repository-reference location="https://SethBodine.github.io/RSSOwlnix/update/program" enabled="true" />
 </site>
+
