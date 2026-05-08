@@ -529,6 +529,11 @@ public class ApplicationServer {
     int end = message.indexOf(' ', start);
     String parameter = message.substring(start, end);
 
+    /* Prevent path traversal: only allow simple resource paths without '..' or unexpected separators */
+    if (parameter.contains("..") || parameter.contains("\\") || !parameter.startsWith("/")) { //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+      return;
+    }
+
     /* Write HTML to the Receiver */
     BufferedOutputStream outS = null;
     try {
@@ -815,4 +820,5 @@ public class ApplicationServer {
     return LOCALHOST;
   }
 }
+
 
