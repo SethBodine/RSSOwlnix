@@ -217,7 +217,7 @@ public class BrowserUtils {
     if (fgWebBrowser == null) {
       try {
         fgWebBrowser = "netscape"; //$NON-NLS-1$
-        p = Runtime.getRuntime().exec(fgWebBrowser + "  " + href); //$NON-NLS-1$
+        p = Runtime.getRuntime().exec(new String[] { fgWebBrowser, href });
       } catch (IOException e) {
         fgWebBrowser = "mozilla"; //$NON-NLS-1$
       }
@@ -226,7 +226,7 @@ public class BrowserUtils {
     /* Try Mozilla as default browser */
     if (p == null) {
       try {
-        p = Runtime.getRuntime().exec(fgWebBrowser + " " + href); //$NON-NLS-1$
+        p = Runtime.getRuntime().exec(new String[] { fgWebBrowser, href });
       } catch (IOException e) {
         Activator.getDefault().logError(e.getMessage(), e);
         showErrorIfExternalBrowserFails(fgWebBrowser);
@@ -252,7 +252,7 @@ public class BrowserUtils {
     /* Launch default browser on Mac */
     else if (Application.IS_MAC) {
       try {
-        Process proc = Runtime.getRuntime().exec("/usr/bin/open " + link); //$NON-NLS-1$
+        Process proc = Runtime.getRuntime().exec(new String[] { "/usr/bin/open", link }); //$NON-NLS-1$
 
         /* Let StreamGobbler handle error message */
         StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream());
@@ -287,7 +287,7 @@ public class BrowserUtils {
 
             /* The default browser was successfully launched once, use again */
             if (fgWebBrowserSuccessfullyOpened) {
-              Process proc = Runtime.getRuntime().exec(fgWebBrowser + " -remote openURL(" + link + ")"); //$NON-NLS-1$ //$NON-NLS-2$
+              Process proc = Runtime.getRuntime().exec(new String[] { fgWebBrowser, "-remote", "openURL(" + link + ")" }); //$NON-NLS-1$ //$NON-NLS-2$
 
               /* Let StreamGobbler handle error message */
               StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream());
@@ -365,7 +365,6 @@ public class BrowserUtils {
 
   private static void useCustomBrowser(final String link) {
     final String browser = Owl.getPreferenceService().getGlobalScope().getString(DefaultPreferences.CUSTOM_BROWSER_PATH);
-    final String executable = browser + " " + link; //$NON-NLS-1$
 
     /* Launch custom browser in seperate thread */
     Thread launcher = new Thread("") { //$NON-NLS-1$
@@ -378,7 +377,7 @@ public class BrowserUtils {
 
         /* Execute custom browser */
         try {
-          Process proc = Runtime.getRuntime().exec(executable);
+          Process proc = Runtime.getRuntime().exec(new String[] { browser, link });
 
           /* Let StreamGobbler handle error message */
           StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream());
