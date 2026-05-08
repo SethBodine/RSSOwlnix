@@ -19,6 +19,9 @@
  **                                                                          **
  **   Contributors:                                                          **
  **     RSSOwl Development Team - initial API and implementation             **
+ **     Xyrio - RSSOwlnix fork (https://github.com/Xyrio/RSSOwlnix)         **
+ **     SethBodine - security fixes, bug fixes and CI improvements           **
+ **                  (https://github.com/SethBodine/RSSOwlnix)              **
  **                                                                          **
  **  **********************************************************************  */
 

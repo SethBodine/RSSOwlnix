@@ -19,12 +19,13 @@
  **                                                                          **
  **   Contributors:                                                          **
  **     RSSOwl Development Team - initial API and implementation             **
+ **     Xyrio - RSSOwlnix fork (https://github.com/Xyrio/RSSOwlnix)         **
+ **     SethBodine - security fixes, bug fixes and CI improvements           **
+ **                  (https://github.com/SethBodine/RSSOwlnix)              **
  **                                                                          **
  **  **********************************************************************  */
 
 package org.rssowl.ui.internal;
-
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.core.runtime.Status;

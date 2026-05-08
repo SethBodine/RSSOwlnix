@@ -19,6 +19,9 @@
  **                                                                          **
  **   Contributors:                                                          **
  **     RSSOwl Development Team - initial API and implementation             **
+ **     Xyrio - RSSOwlnix fork (https://github.com/Xyrio/RSSOwlnix)         **
+ **     SethBodine - security fixes, bug fixes and CI improvements           **
+ **                  (https://github.com/SethBodine/RSSOwlnix)              **
  **                                                                          **
  **  **********************************************************************  */
 
@@ -57,9 +60,9 @@ public final class Owl {
 
   public static final String APPLICATION_NAME = "RSSOwlnix"; //$NON-NLS-1$
   public static final String SPLASH_VERSION = "2.10.1-beta"; //$NON-NLS-1$
-  public static final String HOMEPAGE = "https://github.com/Xyrio/RSSOwlnix"; //$NON-NLS-1$
-  public static final String ISSUES_URL = "https://github.com/Xyrio/RSSOwlnix/issues"; //$NON-NLS-1$
-  public static final String WIKI_URL = "https://github.com/Xyrio/RSSOwlnix/wiki"; //$NON-NLS-1$
+  public static final String HOMEPAGE = "https://github.com/SethBodine/RSSOwlnix"; //$NON-NLS-1$
+  public static final String ISSUES_URL = "https://github.com/SethBodine/RSSOwlnix/issues"; //$NON-NLS-1$
+  public static final String WIKI_URL = "https://github.com/SethBodine/RSSOwlnix/wiki"; //$NON-NLS-1$
   public static final String CRASH_REPORT_EMAIL = ISSUES_URL;
 
   /**
@@ -238,3 +241,4 @@ public final class Owl {
     return InternalOwl.getInstance().isShuttingDown();
   }
 }
+
