@@ -7,20 +7,20 @@
 # REQUIRED SETUP:
 # 
 # 1. Create a Fine-grained Personal Access Token (recommended for least privilege):
-#    a. Go to GitHub.com → Your Profile → Settings
-#    b. Developer settings → Personal access tokens → Fine-grained tokens
+#    a. Go to GitHub.com  Your Profile  Settings
+#    b. Developer settings  Personal access tokens  Fine-grained tokens
 #    c. Click "Generate new token"
 #    d. Token name: "Fork Sync Workflow"
 #    e. Expiration: Choose your preference (90 days, 1 year, or custom)
-#    f. Repository access: "Only select repositories" → Choose your fork repo
-#    g. Permissions → Repository permissions:
+#    f. Repository access: "Only select repositories"  Choose your fork repo
+#    g. Permissions  Repository permissions:
 #       - Contents: Read and write
 #       - Pull requests: Read and write
 #       - Metadata: Read-only (automatically selected)
 #    h. Click "Generate token" and copy it
 #
 # 2. Add the token to your repository:
-#    a. Go to your fork → Settings → Secrets and variables → Actions
+#    a. Go to your fork  Settings  Secrets and variables  Actions
 #    b. Click "New repository secret"
 #    c. Name: PAT_TOKEN
 #    d. Value: Paste the token you copied
@@ -52,7 +52,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
@@ -67,7 +67,7 @@ jobs:
         run: |
           # Get current branch name
           CURRENT_BRANCH="${{ github.ref_name }}"
-          echo "📍 Current fork branch: $CURRENT_BRANCH"
+          echo " Current fork branch: $CURRENT_BRANCH"
           
           # Get the parent repo info from GitHub API
           PARENT=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}" \
@@ -75,17 +75,17 @@ jobs:
             jq -r '.parent.full_name // empty')
           
           if [ -z "$PARENT" ]; then
-            echo "❌ This doesn't appear to be a fork"
+            echo " This doesn't appear to be a fork"
             exit 1
           fi
           
-          echo "🔍 Discovered upstream: $PARENT"
+          echo " Discovered upstream: $PARENT"
           git remote add upstream "https://github.com/${PARENT}.git" || true
           git fetch upstream
           
           # Get default branch of upstream
           DEFAULT_BRANCH=$(git remote show upstream | grep 'HEAD branch' | cut -d' ' -f5)
-          echo "🔍 Upstream default branch: $DEFAULT_BRANCH"
+          echo " Upstream default branch: $DEFAULT_BRANCH"
           echo "UPSTREAM_BRANCH=$DEFAULT_BRANCH" >> $GITHUB_ENV
           echo "FORK_BRANCH=$CURRENT_BRANCH" >> $GITHUB_ENV
           
@@ -98,11 +98,11 @@ jobs:
           REMOTE=$(git rev-parse upstream/${{ env.UPSTREAM_BRANCH }})
           
           if [ "$LOCAL" = "$REMOTE" ]; then
-            echo "✅ Already up to date with upstream"
+            echo " Already up to date with upstream"
             exit 0
           fi
           
-          echo "📦 New commits found in upstream, syncing..."
+          echo " New commits found in upstream, syncing..."
           echo "   Merging upstream/${{ env.UPSTREAM_BRANCH }} into ${{ env.FORK_BRANCH }}"
           
           # Create a sync branch
@@ -112,39 +112,40 @@ jobs:
           
           # Try to push directly first (works if branch is not protected)
           if git push origin "$SYNC_BRANCH:${{ env.FORK_BRANCH }}" 2>/dev/null; then
-            echo "✅ Successfully pushed directly to ${{ env.FORK_BRANCH }}"
+            echo " Successfully pushed directly to ${{ env.FORK_BRANCH }}"
             exit 0
           fi
           
           # If direct push fails, create a PR instead
-          echo "⚠️  Direct push failed (likely due to branch protection)"
-          echo "📝 Creating pull request instead..."
+          echo "  Direct push failed (likely due to branch protection)"
+          echo " Creating pull request instead..."
           
           git push origin "$SYNC_BRANCH"
           
           # Create PR using GitHub CLI
           COMMIT_COUNT=$(git rev-list --count HEAD ^origin/${{ env.FORK_BRANCH }})
           PR_URL=$(gh pr create \
-            --title "🔄 Sync with upstream (${{ env.UPSTREAM_BRANCH }})" \
+            --title " Sync with upstream (${{ env.UPSTREAM_BRANCH }})" \
             --body "This PR syncs the fork with the latest changes from upstream/${{ env.UPSTREAM_BRANCH }}. Upstream commits: $COMMIT_COUNT. This PR was automatically created by the sync workflow and will be auto-merged." \
             --base "${{ env.FORK_BRANCH }}" \
             --head "$SYNC_BRANCH")
           
-          echo "✅ Pull request created: $PR_URL"
+          echo " Pull request created: $PR_URL"
           
           # Auto-merge the PR
-          echo "🔀 Auto-merging pull request..."
+          echo " Auto-merging pull request..."
           gh pr merge "$PR_URL" --merge --auto
           
-          echo "✅ Pull request will be merged automatically once checks pass"
+          echo " Pull request will be merged automatically once checks pass"
           
           # Wait a bit for the merge to complete
           sleep 10
           
           # Clean up the sync branch
-          echo "🧹 Cleaning up sync branch..."
-          git push origin --delete "$SYNC_BRANCH" || echo "⚠️  Branch may have been auto-deleted"
+          echo " Cleaning up sync branch..."
+          git push origin --delete "$SYNC_BRANCH" || echo "  Branch may have been auto-deleted"
           
-          echo "✅ Sync complete!"
+          echo " Sync complete!"
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+
