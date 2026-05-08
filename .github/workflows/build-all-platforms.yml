@@ -9,36 +9,16 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
-    name: Build (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Windows x64
-            os: windows-latest
-            environment: win32,win32,x86_64
-            artifact_name: RSSOwlnix-Windows-x64
-            zip_pattern: RSSOwlnix-win32.win32.x86_64.zip
-
-          - name: Linux x64
-            os: ubuntu-latest
-            environment: linux,gtk,x86_64
-            artifact_name: RSSOwlnix-Linux-x64
-            zip_pattern: RSSOwlnix-linux.gtk.x86_64.tar.gz
-
-          - name: macOS x64
-            os: ubuntu-latest
-            environment: macosx,cocoa,x86_64
-            artifact_name: RSSOwlnix-macOS-x64
-            zip_pattern: RSSOwlnix-macosx.cocoa.x86_64.tar.gz
+    name: Build (All Platforms)
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -61,13 +41,11 @@ jobs:
           restore-keys: |
             tycho-p2-
 
-      - name: Build with Maven/Tycho
-        shell: bash
+      - name: Build with Maven/Tycho (all platforms)
         run: |
           for attempt in 1 2 3; do
-            echo "=== Build attempt $attempt for ${{ matrix.name }} ==="
+            echo "=== Build attempt $attempt ==="
             mvn -B clean verify \
-              -Denvironments="${{ matrix.environment }}" \
               -DskipTests \
               --no-transfer-progress \
               -Dmaven.wagon.http.retryHandler.count=3 \
@@ -86,34 +64,41 @@ jobs:
 
       - name: List produced artifacts (debug)
         if: always()
-        shell: bash
         run: |
-          echo "=== Contents of releng/product/target/products ==="
+          echo "=== Product ZIPs ==="
           find releng/product/target/products -type f | sort || echo "(directory not found)"
-          echo "=== All ZIPs under releng/product/target ==="
-          find releng/product/target -name "*.zip" -o -name "*.tar.gz" | sort || echo "(none found)"
+          echo "=== Update site ==="
+          find releng/update/target/repository -type f | sort || echo "(directory not found)"
 
-      - name: Find ZIP artifact
-        id: find_zip
-        shell: bash
-        run: |
-          ZIP=$(find releng/product/target/products -name "${{ matrix.zip_pattern }}" | head -1)
-          if [ -z "$ZIP" ]; then
-            echo "ERROR: ${{ matrix.zip_pattern }} not found under releng/product/target/products"
-            echo "Files present:"
-            find releng/product/target/products -name "*.zip" -o -name "*.tar.gz" || echo "(none)"
-            exit 1
-          fi
-          echo "zip_path=$ZIP" >> "$GITHUB_OUTPUT"
-          echo "Found: $ZIP"
-
-
-
-      - name: Upload ZIP artifact
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ steps.find_zip.outputs.zip_path }}
+          name: RSSOwlnix-Windows-x64
+          path: releng/product/target/products/RSSOwlnix-win32.win32.x86_64.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: RSSOwlnix-Linux-x64
+          path: releng/product/target/products/RSSOwlnix-linux.gtk.x86_64.tar.gz
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: RSSOwlnix-macOS-x64
+          path: releng/product/target/products/RSSOwlnix-macosx.cocoa.x86_64.tar.gz
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload P2 update site artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: p2-update-site
+          path: releng/update/target/repository/
           retention-days: 30
           if-no-files-found: error
 
@@ -133,11 +118,34 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/*.zip
-            artifacts/**/*.tar.gz
+            artifacts/RSSOwlnix-Windows-x64/*.zip
+            artifacts/RSSOwlnix-Linux-x64/*.tar.gz
+            artifacts/RSSOwlnix-macOS-x64/*.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-p2:
+    name: Publish P2 Update Site
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download P2 site artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: p2-update-site
+          path: p2-site
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: p2-site
+          destination_dir: update/program
+          keep_files: true
+
 
