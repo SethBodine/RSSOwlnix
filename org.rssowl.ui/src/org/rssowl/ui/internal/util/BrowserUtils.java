@@ -287,7 +287,7 @@ public class BrowserUtils {
 
             /* The default browser was successfully launched once, use again */
             if (fgWebBrowserSuccessfullyOpened) {
-              Process proc = Runtime.getRuntime().exec(new String[] { fgWebBrowser, "-remote", "openURL(" + link + ")" }); //$NON-NLS-1$ //$NON-NLS-2$
+              Process proc = Runtime.getRuntime().exec(new String[] { fgWebBrowser, "-remote", "openURL(" + link + ")" }); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
               /* Let StreamGobbler handle error message */
               StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream());
