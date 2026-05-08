@@ -79,7 +79,7 @@ import java.util.TimerTask;
  */
 public class TestWebServer {
   private static final String updateSiteLocalFolder = "file:///C:/rssowlnixprj/RSSOwlnix/releng/product/target/repository";
-  private static final String updateSiteRemoteFolder = "https://xyrio.github.io/RSSOwlnix-site/p2/program";
+  private static final String updateSiteRemoteFolder = "https://SethBodine.github.io/RSSOwlnix/update/program";
   private static final String webServerRootFolder = new File("httproot").getAbsolutePath().replace("\\", "/");
   private static final String webServerDataFolder = new File("httproot/data").getAbsolutePath().replace("\\", "/");
   private static Server webServer;
@@ -546,3 +546,4 @@ public class TestWebServer {
   }
 
 }
+
