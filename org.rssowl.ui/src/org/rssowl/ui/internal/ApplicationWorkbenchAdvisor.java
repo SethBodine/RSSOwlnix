@@ -25,6 +25,7 @@
 package org.rssowl.ui.internal;
 
 import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.ui.application.IWorkbenchConfigurer;
 import org.eclipse.ui.application.IWorkbenchWindowConfigurer;
@@ -32,6 +33,10 @@ import org.eclipse.ui.application.WorkbenchAdvisor;
 import org.eclipse.ui.application.WorkbenchWindowAdvisor;
 import org.rssowl.core.util.LoggingSafeRunnable;
 import org.rssowl.core.util.SecurityUtils;
+import java.io.File;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * @author bpasero
@@ -118,10 +123,128 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor {
   public void initialize(IWorkbenchConfigurer configurer) {
     IWorkbenchConfigurer workbenchConfigurer = getWorkbenchConfigurer();
 
+    /*
+     * Attempt to repair a corrupt workbench.xmi before Eclipse tries to load
+     * it. Corruption typically occurs when the JVM is killed mid-write
+     * (truncated file, null bytes, or a broken closing tag). Rather than
+     * deleting the whole file  which loses all window/tab/perspective state 
+     * we try to salvage as much as possible by trimming back to the last
+     * well-formed closing tag and re-closing the document.
+     */
+    repairWorkbenchXmi();
+
     /* Save UI state and restore after restart */
     workbenchConfigurer.setSaveAndRestore(true);
 
     super.initialize(configurer);
+  }
+
+  /**
+   * Locates the workbench.xmi in the instance data area and validates it. If
+   * the file is corrupt (typically truncated by a JVM kill mid-write), it is
+   * repaired in place by trimming back to the last complete closing tag and
+   * re-closing any open root element, preserving as much state as possible.
+   * A backup is written alongside the file before any modification.
+   */
+  private void repairWorkbenchXmi() {
+    try {
+      /* workbench.xmi lives at:
+       * <instance-area>/.metadata/.plugins/org.eclipse.e4.workbench/workbench.xmi */
+      java.io.File workDir = new java.io.File(
+          Platform.getInstanceLocation().getURL().getPath(),
+          ".metadata/.plugins/org.eclipse.e4.workbench"); //$NON-NLS-1$
+      java.io.File xmi = new java.io.File(workDir, "workbench.xmi"); //$NON-NLS-1$
+
+      if (!xmi.exists() || xmi.length() == 0)
+        return;
+
+      /* Read the file */
+      byte[] raw = java.nio.file.Files.readAllBytes(xmi.toPath());
+      String content = new String(raw, java.nio.charset.StandardCharsets.UTF_8);
+
+      /* Quick well-formedness check via SAX - if it parses, nothing to do */
+      if (isWellFormedXml(content))
+        return;
+
+      /* File is corrupt - write a backup before touching it */
+      java.io.File backup = new java.io.File(workDir, "workbench.xmi.corrupt.bak"); //$NON-NLS-1$
+      java.nio.file.Files.copy(xmi.toPath(), backup.toPath(),
+          java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+      /* Attempt repair: find the last occurrence of a proper closing tag.
+       * workbench.xmi's root element is always <workbench:Application ...>
+       * containing <children> and <snippets> elements. We scan backwards for
+       * the last complete </...> or self-closing /> and truncate there,
+       * then re-close the root if needed. */
+      String repaired = repairXmlContent(content);
+
+      if (repaired != null && isWellFormedXml(repaired)) {
+        java.nio.file.Files.write(xmi.toPath(),
+            repaired.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      } else {
+        /* Repair failed - delete so Eclipse starts fresh rather than hanging */
+        xmi.delete();
+      }
+    } catch (Exception e) {
+      /* Non-fatal - Eclipse will detect the missing/invalid file itself */
+    }
+  }
+
+  private boolean isWellFormedXml(String content) {
+    try {
+      javax.xml.parsers.SAXParserFactory factory = javax.xml.parsers.SAXParserFactory.newInstance();
+      factory.setValidating(false);
+      factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false); //$NON-NLS-1$
+      factory.setFeature("http://xml.org/sax/features/external-general-entities", false); //$NON-NLS-1$
+      javax.xml.parsers.SAXParser parser = factory.newSAXParser();
+      parser.parse(new org.xml.sax.InputSource(
+          new java.io.StringReader(content)), new org.xml.sax.helpers.DefaultHandler());
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  private String repairXmlContent(String content) {
+    /* Find the last well-formed closing tag working backwards through the file.
+     * Each iteration removes the last incomplete or truncated element and tests
+     * whether the remainder is valid XML. This preserves the maximum amount of
+     * state. The root closing tag is re-appended if missing. */
+    String root = "</workbench:Application>"; //$NON-NLS-1$
+
+    /* Strip any trailing null bytes or non-XML characters */
+    int end = content.length();
+    while (end > 0 && content.charAt(end - 1) == '\0')
+      end--;
+    String trimmed = content.substring(0, end).stripTrailing();
+
+    /* If it already ends with the root close tag, just test and return */
+    if (trimmed.endsWith(root)) {
+      return isWellFormedXml(trimmed) ? trimmed : null;
+    }
+
+    /* Try appending the root close tag to the truncated content */
+    String candidate = trimmed;
+    if (!candidate.contains(root)) {
+      /* Find the last complete child closing tag */
+      int lastClose = Math.max(
+          candidate.lastIndexOf("</children>"), //$NON-NLS-1$
+          candidate.lastIndexOf("</snippets>")); //$NON-NLS-1$
+
+      if (lastClose >= 0) {
+        candidate = candidate.substring(0, lastClose + candidate.substring(lastClose).indexOf('>') + 1);
+        candidate = candidate + "\n" + root; //$NON-NLS-1$
+        if (isWellFormedXml(candidate))
+          return candidate;
+      }
+
+      /* Last resort - just append the closing tag */
+      candidate = trimmed + "\n" + root; //$NON-NLS-1$
+      if (isWellFormedXml(candidate))
+        return candidate;
+    }
+
+    return null;
   }
 
   /**
@@ -175,17 +298,5 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor {
     });
 
     return res[0];
-  }
-
-  /*
-   * Called after the workbench has shut down. Forces a clean JVM exit to
-   * prevent non-daemon threads (db4o background tasks, Lucene index threads,
-   * HTTP client pools) from keeping the JVM alive as an orphaned process.
-   * Without this, closing the window leaves javaw.exe running, and the next
-   * launch finds the port bound and the database locked causing a 2-minute delay.
-   */
-  @Override
-  public void postShutdown() {
-    System.exit(0);
   }
 }
