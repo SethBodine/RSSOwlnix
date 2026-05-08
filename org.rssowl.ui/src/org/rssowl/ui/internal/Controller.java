@@ -56,6 +56,64 @@ import org.rssowl.core.connection.ConnectionException;
 import org.rssowl.core.connection.CredentialsException;
 import org.rssowl.core.connection.IConnectionPropertyConstants;
 import org.rssowl.core.connection.MonitorCanceledException;
+/*   **********************************************************************  **
+ **   Copyright notice                                                       **
+ **                                                                          **
+ **   (c) 2005-2009 RSSOwl Development Team                                  **
+ **   http://www.rssowl.org/                                                 **
+ **                                                                          **
+ **   All rights reserved                                                    **
+ **                                                                          **
+ **   This program and the accompanying materials are made available under   **
+ **   the terms of the Eclipse Public License v1.0 which accompanies this    **
+ **   distribution, and is available at:                                     **
+ **   http://www.rssowl.org/legal/epl-v10.html                               **
+ **                                                                          **
+ **   A copy is found in the file epl-v10.html and important notices to the  **
+ **   license from the team is found in the textfile LICENSE.txt distributed **
+ **   in this package.                                                       **
+ **                                                                          **
+ **   This copyright notice MUST APPEAR in all copies of the file!           **
+ **                                                                          **
+ **   Contributors:                                                          **
+ **     RSSOwl Development Team - initial API and implementation             **
+ **                                                                          **
+ **  **********************************************************************  */
+
+package org.rssowl.ui.internal;
+
+import org.eclipse.core.commands.Command;
+import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IConfigurationElement;
+import org.eclipse.core.runtime.IExtensionRegistry;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.InvalidRegistryObjectException;
+import org.eclipse.core.runtime.ListenerList;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.SafeRunner;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.window.Window;
+import org.eclipse.osgi.util.NLS;
+import org.eclipse.swt.program.Program;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IActionDelegate;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.commands.ICommandService;
+import org.rssowl.core.IApplicationService;
+import org.rssowl.core.Owl;
+import org.rssowl.core.connection.AuthenticationRequiredException;
+import org.rssowl.core.connection.ConnectionException;
+import org.rssowl.core.connection.CredentialsException;
+import org.rssowl.core.connection.IConnectionPropertyConstants;
+import org.rssowl.core.connection.MonitorCanceledException;
 import org.rssowl.core.connection.NotModifiedException;
 import org.rssowl.core.connection.SyncConnectionException;
 import org.rssowl.core.connection.UnknownProtocolException;
@@ -1056,7 +1114,12 @@ public class Controller {
     } catch (UnknownProtocolException e) {
       Activator.getDefault().getLog().log(e.getStatus());
     } catch (ConnectionException e) {
-      Activator.getDefault().getLog().log(e.getStatus());
+      /* A favicon fetch failing due to timeout or network error is a normal
+       * condition (the feed host may be slow or temporarily unreachable).
+       * Log at INFO rather than ERROR to avoid alarming users via log tools. */
+      Activator.getDefault().getLog().log(
+          new org.eclipse.core.runtime.Status(org.eclipse.core.runtime.IStatus.INFO,
+              Activator.PLUGIN_ID, e.getMessage()));
     }
   }
 
