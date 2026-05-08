@@ -46,7 +46,22 @@ import javax.crypto.spec.PBEKeySpec;
  */
 @SuppressWarnings("restriction")
 public class DefaultPasswordProvider extends PasswordProvider {
-  private static final String DIGEST_ALGORITHM = "MD5"; //$NON-NLS-1$
+
+  /*
+   * SECURITY NOTE (changed from MD5):
+   * SHA-512 is used to derive an internal key from the user's master password before it is
+   * passed to Equinox secure storage as a PBEKeySpec. MD5 was previously used here and is
+   * cryptographically broken (collision vulnerabilities, trivially brute-forceable).
+   *
+   * MIGRATION IMPACT: Existing users who have stored feed credentials protected by a master
+   * password will find those credentials unreadable after this change, because the derived
+   * key will differ from the one used to encrypt the stored .credentials file. They will be
+   * prompted to re-enter their feed passwords once. Users relying on OS-level credential
+   * storage (Windows DPAPI / macOS Keychain) are unaffected. Advise affected users to use
+   * Preferences  Credentials  Reset before upgrading, or simply re-enter credentials when
+   * prompted after the update.
+   */
+  private static final String DIGEST_ALGORITHM = "SHA-512"; //$NON-NLS-1$
 
   /*
    * @see org.eclipse.equinox.security.storage.provider.PasswordProvider#getPassword(org.eclipse.equinox.security.storage.provider.IPreferencesContainer, int)
