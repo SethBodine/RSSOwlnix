@@ -67,6 +67,7 @@ import org.rssowl.core.util.LongOperationMonitor;
 import org.rssowl.ui.internal.util.ImportUtils;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -238,7 +239,7 @@ public class StartupShutdownTest extends LargeBlockSizeTest {
     assertNull(folder.toReference().resolve());
     assertNull(bookmark.toReference().resolve());
 
-    File tmpFile = File.createTempFile("rssowlopml", "tmp");
+    File tmpFile = Files.createTempFile("rssowlopml", "tmp").toFile();
     if (!tmpFile.exists())
       tmpFile.createNewFile();
     tmpFile.deleteOnExit();
