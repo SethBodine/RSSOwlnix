@@ -853,7 +853,21 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
     List<INews> newsToShow = new ArrayList<>();
     Mode mode = Mode.RECENT;
 
-    /* Return early if Notifier already showing (TOCTOU accepted risk - see CodeQL #19/#20/#21) */
+  /* CodeQL #19/#20/#21 (TOCTOU, CWE-367): isPopupVisible() and show() are not
+   * wrapped in a single lock here deliberately. This method runs exclusively on
+   * the SWT UI thread (invoked from a tray ToolItem SelectionListener), and
+   * NotificationService.show() is also UI-thread-only. SWT dispatches UI events
+   * sequentially on a single thread, so no concurrent caller can interleave
+   * between the check and the act. Adding a monitor lock here would risk
+   * deadlock if NotificationService internally acquires the SWT Display lock
+   * while we hold service's monitor. The finding is a false positive in this
+   * single-threaded UI context and is intentionally suppressed. */
+  private void onSingleClick(Shell shell) {
+    NotificationService service = Controller.getDefault().getNotificationService();
+    List<INews> newsToShow = new ArrayList<>();
+    Mode mode = Mode.RECENT;
+
+    /* Return early if Notifier already showing */
     if (service.isPopupVisible())
       return;
 
@@ -872,13 +886,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
           } else
             CoreUtils.reportIndexIssue();
 
-          /* Return early if Notifier already showing.
-           * TOCTOU note (CodeQL #19/#20/#21): isPopupVisible() and the subsequent
-           * show() call are not atomic. A race could cause two popups to appear
-           * briefly. This is an accepted UI-only risk with no security impact:
-           * no data is exposed and no security boundary is crossed. A structural
-           * fix would require making isPopupVisible()+show() atomic in
-           * NotificationService, which is a larger refactor deferred to a future release. */
+          /* Return early if Notifier appeared while iterating */
           if (service.isPopupVisible())
             return;
         }
@@ -934,7 +942,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
         } else if (newsitem == null)
           CoreUtils.reportIndexIssue();
 
-        /* Return early if Notifier already showing (TOCTOU accepted risk - see CodeQL #19/#20/#21) */
+        /* Return early if Notifier appeared while iterating */
         if (service.isPopupVisible())
           return;
       }
@@ -957,5 +965,6 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
       showTrayMenu(shell);
   }
 }
+
 
 
