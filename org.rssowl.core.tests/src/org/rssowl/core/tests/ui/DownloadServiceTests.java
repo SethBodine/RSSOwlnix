@@ -38,6 +38,7 @@ import org.rssowl.ui.internal.services.DownloadService;
 import org.rssowl.ui.internal.services.DownloadService.DownloadRequest;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.io.IOException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
@@ -222,7 +223,7 @@ public class DownloadServiceTests {
 
   private File getTmpDir() throws IOException {
     if (fTmpDir == null) {
-      File tmpFile = File.createTempFile("rssowl", "tmp");
+      File tmpFile = Files.createTempFile("rssowl", "tmp").toFile();
       fTmpDir = tmpFile.getParentFile();
       tmpFile.delete();
     }
