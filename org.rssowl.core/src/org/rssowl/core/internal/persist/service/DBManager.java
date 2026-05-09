@@ -294,15 +294,17 @@ public class DBManager {
       fShutdownHook = new Thread("db4o-shutdown-hook") { //$NON-NLS-1$
         @Override
         public void run() {
+          boolean locked = false;
           try {
             fLock.writeLock().lock();
-            try {
-              if (fObjectContainer != null && !fObjectContainer.ext().isClosed())
-                while (!fObjectContainer.close());
-            } finally {
-              fLock.writeLock().unlock();
-            }
+            locked = true;
+            if (fObjectContainer != null && !fObjectContainer.ext().isClosed())
+              while (!fObjectContainer.close());
           } catch (Throwable t) {
+          } finally {
+            if (locked)
+              fLock.writeLock().unlock();
+          }
             /* Best-effort only  we are inside a shutdown hook */
           }
         }
@@ -1632,3 +1634,4 @@ public class DBManager {
     }
   }
 }
+
