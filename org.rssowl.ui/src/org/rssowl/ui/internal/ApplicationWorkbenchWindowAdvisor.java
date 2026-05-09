@@ -19,9 +19,6 @@
  **                                                                          **
  **   Contributors:                                                          **
  **     RSSOwl Development Team - initial API and implementation             **
- **     Xyrio - RSSOwlnix fork (https://github.com/Xyrio/RSSOwlnix)         **
- **     SethBodine - security fixes, bug fixes and CI improvements           **
- **                  (https://github.com/SethBodine/RSSOwlnix)              **
  **                                                                          **
  **  **********************************************************************  */
 
@@ -856,7 +853,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
     List<INews> newsToShow = new ArrayList<>();
     Mode mode = Mode.RECENT;
 
-    /* Return early if Notifier already showing */
+    /* Return early if Notifier already showing (TOCTOU accepted risk - see CodeQL #19/#20/#21) */
     if (service.isPopupVisible())
       return;
 
@@ -875,7 +872,13 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
           } else
             CoreUtils.reportIndexIssue();
 
-          /* Return early if Notifier already showing */
+          /* Return early if Notifier already showing.
+           * TOCTOU note (CodeQL #19/#20/#21): isPopupVisible() and the subsequent
+           * show() call are not atomic. A race could cause two popups to appear
+           * briefly. This is an accepted UI-only risk with no security impact:
+           * no data is exposed and no security boundary is crossed. A structural
+           * fix would require making isPopupVisible()+show() atomic in
+           * NotificationService, which is a larger refactor deferred to a future release. */
           if (service.isPopupVisible())
             return;
         }
@@ -931,7 +934,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
         } else if (newsitem == null)
           CoreUtils.reportIndexIssue();
 
-        /* Return early if Notifier already showing */
+        /* Return early if Notifier already showing (TOCTOU accepted risk - see CodeQL #19/#20/#21) */
         if (service.isPopupVisible())
           return;
       }
@@ -954,4 +957,5 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
       showTrayMenu(shell);
   }
 }
+
 
