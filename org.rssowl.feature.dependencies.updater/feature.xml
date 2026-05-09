@@ -3,7 +3,7 @@
       id="org.rssowl.dependencies.updater"
       label="RSSOwlnix Updater Dependencies"
       version="2.10.1.qualifier"
-      provider-name="https://github.com/Xyrio/RSSOwlnix">
+      provider-name="https://github.com/SethBodine/RSSOwlnix">
 
    <description>
       dependencies for the default eclipse updater (org.eclipse.equinox.p2.user.ui)
@@ -555,3 +555,4 @@ litigation.
          unpack="false"/>
 
 </feature>
+

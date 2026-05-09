@@ -3,7 +3,7 @@
       id="org.rssowl.tests"
       label="RSSOwlnix Tests Feature"
       version="2.10.1.qualifier"
-      provider-name="https://github.com/Xyrio/RSSOwlnix">
+      provider-name="https://github.com/SethBodine/RSSOwlnix">
 
    <description url="http://www.example.com/description">
       [Enter Feature Description here.]
@@ -35,3 +35,4 @@
          unpack="false"/>
 
 </feature>
+
