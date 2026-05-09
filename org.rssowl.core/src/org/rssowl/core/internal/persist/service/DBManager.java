@@ -301,11 +301,10 @@ public class DBManager {
             if (fObjectContainer != null && !fObjectContainer.ext().isClosed())
               while (!fObjectContainer.close());
           } catch (Throwable t) {
+            /* Best-effort only  we are inside a shutdown hook */
           } finally {
             if (locked)
               fLock.writeLock().unlock();
-          }
-            /* Best-effort only  we are inside a shutdown hook */
           }
         }
       };
@@ -1634,4 +1633,5 @@ public class DBManager {
     }
   }
 }
+
 
