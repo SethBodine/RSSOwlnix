@@ -69,6 +69,7 @@ import org.rssowl.ui.internal.util.ImportUtils;
 import org.rssowl.ui.internal.util.ModelUtils;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.io.FileInputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -120,19 +121,19 @@ public class ImportExportOPMLTest {
     ((PersistenceServiceImpl)Owl.getPersistenceService()).recreateSchemaForTests();
 
     fFactory = Owl.getModelFactory();
-    fTmpFile = File.createTempFile("rssowl", ".opml2"); //Test the fallback to OPML format too
+    fTmpFile = Files.createTempFile("rssowl", ".opml2").toFile(); //Test the fallback to OPML format too
     fTmpFile.deleteOnExit();
 
-    fTmpFileOnlyMarks = File.createTempFile("rssowl_onlymarks", ".opml");
+    fTmpFileOnlyMarks = Files.createTempFile("rssowl_onlymarks", ".opml").toFile();
     fTmpFileOnlyMarks.deleteOnExit();
 
-    fTmpFileHierarchy = File.createTempFile("rssowl_hierarchy", ".opml");
+    fTmpFileHierarchy = Files.createTempFile("rssowl_hierarchy", ".opml").toFile();
     fTmpFileHierarchy.deleteOnExit();
 
-    fTmpFileInvalidLocations = File.createTempFile("rssowl_invalidlocations", ".opml");
+    fTmpFileInvalidLocations = Files.createTempFile("rssowl_invalidlocations", ".opml").toFile();
     fTmpFileInvalidLocations.deleteOnExit();
 
-    fTmpBackupFile = File.createTempFile("rssowl_backup", ".opml");
+    fTmpBackupFile = Files.createTempFile("rssowl_backup", ".opml").toFile();
     fTmpBackupFile.deleteOnExit();
 
     /* Fill Defaults */
