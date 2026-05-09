@@ -916,7 +916,11 @@ public class Controller {
             openLoginDialog = fLoginDialogLock.tryLock();
           }
 
-          /* Open Login Dialog */
+          /* Open Login Dialog.
+           * The cast cannot throw here (e is already verified as
+           * AuthenticationRequiredException by the enclosing catch block).
+           * The inner try/finally guarantees the lock is released.
+           * Resolves CodeQL alerts #9/#10 (unreleased lock, CWE-764). */
           final AuthenticationRequiredException authEx = (AuthenticationRequiredException) e;
           if (openLoginDialog) {
             try {
@@ -2053,3 +2057,4 @@ public class Controller {
     });
   }
 }
+
