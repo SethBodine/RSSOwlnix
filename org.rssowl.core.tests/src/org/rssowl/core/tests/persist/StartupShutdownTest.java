@@ -279,9 +279,17 @@ public class StartupShutdownTest extends LargeBlockSizeTest {
     assertNotNull(folder.toReference().resolve());
     assertNotNull(bookmark.toReference().resolve());
 
-    File tmpFile = File.createTempFile("rssowldb", "tmp");
-    if (!tmpFile.exists())
-      tmpFile.createNewFile();
+    /* Create temp file with owner-only permissions to prevent local info disclosure (CWE-732) */
+    java.nio.file.Path tmpPath = Files.createTempFile("rssowldb", "tmp"); //$NON-NLS-1$ //$NON-NLS-2$
+    try {
+      tmpPath.toFile().setReadable(false, false);
+      tmpPath.toFile().setReadable(true, true);
+      tmpPath.toFile().setWritable(false, false);
+      tmpPath.toFile().setWritable(true, true);
+    } catch (SecurityException se) {
+      /* Best-effort  some platforms may not support per-owner permissions */
+    }
+    File tmpFile = tmpPath.toFile();
     tmpFile.deleteOnExit();
 
     CoreUtils.copy(DBManagerTest.class.getResourceAsStream("/data/rssowl.db"), new FileOutputStream(tmpFile));
@@ -413,3 +421,4 @@ public class StartupShutdownTest extends LargeBlockSizeTest {
     return image;
   }
 }
+
