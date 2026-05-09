@@ -102,176 +102,201 @@ Nothing currently pending.
 
 ---
 
-## [2.10.1] - 2025-05-05
+### Security (additional - CodeQL batch 2)
+
+- **Unreleased lock in `DBManager` shutdown hook** (CodeQL #8  Medium, CWE-764)
+  The JVM shutdown hook acquired `fLock.writeLock().lock()` inside a `try` block
+  but unlocked in an inner `finally`. If `lock()` itself threw, the outer
+  `catch(Throwable)` consumed the exception but the `finally` never ran. Fixed
+  using a `boolean locked` guard in a single outer `try/finally`.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/service/DBManager.java`
+
+- **Unreleased lock in `Controller` login dialog** (CodeQL #9/#10  Medium, CWE-764)
+  `fLoginDialogLock.lock()` was acquired but the `try/finally` block containing
+  `unlock()` only began after a cast and conditional check. If an unexpected
+  exception fired in that gap the lock would be leaked. The cast at this call
+  site cannot throw (the enclosing `catch` block guarantees the type), so a
+  clarifying comment and structural annotation have been added. The inner
+  `try/finally` guarantees unlock in all paths.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
+
+- **TOCTOU race in notification popup checks** (CodeQL #19/#20/#21  High, CWE-367)  accepted risk
+  Three `isPopupVisible()` guard checks before calling `show()` are not atomic.
+  A race could cause two notification popups to appear briefly. This is an
+  accepted UI-only risk: no data is exposed and no security boundary is crossed.
+  The worst outcome is a briefly doubled popup. A structural fix would require
+  making `isPopupVisible()` and `show()` atomic in `NotificationService`, deferred
+  to a future release. Suppression comments added explaining the rationale.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java`
+
+### Tests
+
+- **Local information disclosure via world-readable temp files** (CodeQL #1118  Medium, CWE-732)
+  Eight `File.createTempFile()` calls in test files created world-readable
+  temporary files on Linux/macOS. Replaced with `Files.createTempFile()` (Java
+  NIO) which sets restrictive permissions by default. Test code only  no
+  production impact.
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/importer/ImportExportOPMLTest.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/persist/StartupShutdownTest.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/ui/DownloadServiceTests.java`
+
+## [2.10.1] - 2026-05-08
 
 ### Bug Fixes
 
 - **Systray icon lost after Windows Explorer crash**
   When Windows Explorer crashed and restarted, the system tray icon would
-  disappear with no way to restore it short of killing and relaunching the
-  application. The application now detects the external disposal of the tray
-  icon and automatically attempts to recover it, retrying every 3 seconds for
-  up to 5 attempts to allow Explorer time to fully restart. If the window was
-  hidden to the tray at the time of the crash it is automatically restored to
-  the foreground so the user is not left with no way to access the application.
+  disappear with no way to restore it. The application now detects external
+  disposal of the tray icon and automatically recovers it, retrying every 3
+  seconds for up to 5 attempts. If the window was hidden to tray at the time
+  of the crash it is restored automatically.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java`
+
+- **Systray icon visible at launch before window opens on Windows 11**
+  `new TrayItem()` causes the icon to appear immediately on Windows 11 before
+  `setVisible(false)` is processed. Fixed by deferring the hide call with
+  `asyncExec` and guarding against the `TRAY_ON_START` scenario.
   `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java`
 
 - **Stale feed content when navigating A  B  A in Reuse Feed View mode**
-  Navigating from one feed to another and back again would display the content
-  of the intermediate feed rather than refreshing back to the original. The root
-  cause was a race condition in the background content-loading job: the job
-  captured the content provider as a field reference rather than a snapshot, so
-  a rapidly submitted follow-up job could corrupt the cache of the already-active
-  provider before the UI update ran. Fixed by capturing the content provider
-  instance at job-submission time and adding a generation counter to discard any
-  UI updates that belong to a superseded navigation.
+  A race condition in the background content-loading job caused the wrong feed's
+  articles to be displayed when navigating quickly between feeds. Fixed by
+  capturing the content provider at job-submission time, adding a generation
+  counter to discard stale UI updates, and skipping `refreshCache` entirely in
+  `runInBackground` when the job is already superseded.
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FeedView.java`
+
+- **Items not marked as read when scrolling past them using the scrollbar**
+  Scrolling via the scrollbar did not mark bypassed items as read. A scroll
+  listener now marks all items above the current top-visible item as read
+  immediately when the user scrolls past them.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java`
+
+- **Items not marked as read when feed fits entirely in the viewport**
+  On single-page feeds (no scrollbar visible), mouse wheel scrolling and
+  arrow-key navigation now mark all visible items as read, matching the
+  behaviour of multi-page feeds that have been scrolled through.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java`
+
+- **Single item in a feed not marked as read**
+  When a feed contained only one article with no scrollbar, the mark-as-read
+  tracker never fired because no selection event was dispatched. Fixed by
+  auto-selecting the first item 300ms after input is set (after the internal
+  block flag clears) and by marking single items read via the browser renderer.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserControl.java`
+
+- **Application takes 2+ minutes to launch on domain-joined Windows machines**
+  `doHandshake()` in `Activator.java` used `InetAddress.getByName()` which
+  triggers a reverse DNS lookup  blocking for up to 2 minutes on domain-joined
+  machines where HKLM registry reads go through Group Policy verification. Fixed
+  using `InetAddress.getLoopbackAddress()` with an explicit 5-second connect
+  timeout. A db4o JVM shutdown hook was also added to ensure the database file
+  lock is released on any JVM exit, preventing orphaned processes from blocking
+  subsequent launches.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Activator.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/service/DBManager.java`
+
+- **Slow startup caused by corrupt `workbench.xmi`**
+  If the JVM was killed mid-write, the `workbench.xmi` UI state file could
+  become corrupt, causing Eclipse to hang on startup. The application now
+  validates and surgically repairs the file at startup  trimming back to the
+  last well-formed closing tag and re-closing the root element  preserving as
+  much window/tab/perspective state as possible. A `.corrupt.bak` backup is
+  written before any modification.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchAdvisor.java`
+
+- **Favicon connection timeouts logged as ERROR**
+  Network timeouts when fetching feed favicons were incorrectly logged at ERROR
+  severity. Downgraded to INFO since timeouts are a normal network condition.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
+
+- **Eclipse 4.30 target platform using stale download URL**
+  `download.eclipse.org/eclipse/updates/4.30` was redirecting intermittently
+  and failing in CI. Pointed to the stable archive at
+  `archive.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110`.
+  `releng/target_platform/target_platform.target`
+
+- **`plugin.xml` share provider block had malformed XML**
+  A duplicate `FeedSearch` opening tag with no matching close caused `plugin.xml`
+  to fail XML validation on startup, preventing the application from registering
+  its extension points.
+  `org.rssowl.ui/plugin.xml`
+
+- **`ScrollBar` import missing in `NewsTableControl`**  build failure resolved.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java`
+
+- **`setState` called with single `INews` instead of `Collection`**  build failure resolved.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserControl.java`
 
 ### New Features
 
-- **Search article body / description content**
-  The quick-search dropdown in the feed filter bar now includes a
-  _Find in Article Body_ option, allowing searches against the full text of
-  article descriptions rather than only headlines, authors, categories and
-  labels.
+- **Article body / description search**
+  The quick-search dropdown now includes _Find in Article Body_, allowing
+  searches against the full text of article descriptions.
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsFilter.java`
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FilterBar.java`
 
 - **Today and This Week filter options**
-  Two new time-based filters have been added to the show-filter dropdown:
-  _Show Today_ (articles since midnight) and _Show This Week_ (articles within
-  the last 7 days). Both can also be promoted to saved searches via the existing
-  Save as Search option.
+  Two new time-based filters added to the show-filter dropdown: _Show Today_
+  (articles since midnight) and _Show This Week_ (last 7 days). Both can be
+  saved as persistent saved searches.
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsFilter.java`
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FilterBar.java`
 
+- **Refreshed social sharing providers**
+  Removed dead services (Delicious, Technorati, Digg, StumbleUpon, Google
+  Bookmarks, Mixx, FriendFeed, Newsvine, MySpace, Yahoo Buzz, Posterous).
+  Renamed Twitter to X with updated share URL. Added Bluesky, Threads,
+  WhatsApp, and Substack Notes. Updated Facebook, LinkedIn, and Reddit URLs.
+  `org.rssowl.ui/plugin.xml`, `org.rssowl.ui/plugin.properties`
+
+- **Database loading progress messages**
+  Added status messages to the startup progress dialog for long-running
+  database operations.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/service/DBManager.java`
+
+- **Centralised version management script**
+  `set-version.sh` updates all version references across the codebase in a
+  single command using only bash and `sed`. No Maven or other tooling required.
+
 ### Build & CI
 
-- **GitHub Actions workflow for Windows packaging**
-  Added `.github/workflows/build-windows.yml` which uses the existing
-  Tycho/Maven build cross-compiled on an Ubuntu runner to produce a Windows
-  x86_64 ZIP. The ZIP is uploaded as a workflow artifact on every push to
-  `main` and automatically attached to a GitHub Release when a version tag
-  (e.g. `v2.10.1`) is pushed. Pre-release tags (`-beta`, `-rc`) are marked
-  accordingly. No code-signing certificate is required.
+- **GitHub Actions multi-platform build workflow**
+  Added `.github/workflows/build-all-platforms.yml` producing Windows ZIP,
+  Linux `.tar.gz`, and macOS `.tar.gz` packages. Windows builds run on a native
+  `windows-2025` runner. On a version tag push, all three archives are attached
+  to a GitHub Release automatically.
 
-- **Eclipse 4.30 target platform pointed to archive**
-  The target platform repository URL was updated from `download.eclipse.org`
-  to `archive.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110` so that
-  the build resolves against the stable archived release rather than the live
-  redirecting URL which caused intermittent download failures in CI.
-  `releng/target_platform/target_platform.target`
+- **p2 artifact caching**
+  Tycho p2 repository cached between CI runs, keyed on the target platform file.
 
-- **p2 artifact caching added to CI workflow**
-  The Tycho p2 local repository (`~/.m2/repository/p2`) is now cached between
-  workflow runs keyed on the target platform file, preventing repeated downloads
-  of Eclipse platform artifacts from the archive on every build.
+- **SWT startup flags baked into product**
+  `-Dswt.disableTabletSupport=true`, `-Dswt.enableFontHinting=false`, and
+  `-Dswt.font=Segoe UI` added to `vmArgs` to reduce registry polling on
+  domain-joined Windows machines.
 
-### Developer Tooling
+- **SLF4J log noise suppressed**
+  Added `-Dslf4j.internal.verbosity=WARN` to suppress the spurious
+  `StaticLoggerBinder` warning logged at ERROR severity on startup.
 
-- **`set-version.sh`  centralised version management script**
-  A bash script has been added to the repository root that updates all version
-  references across the codebase in a single command. Requires only a standard
-  bash shell and `sed`  no Maven or other tooling needed on the editing
-  machine. Usage:
+### Performance
 
-  ```bash
-  ./set-version.sh 2.10.1           # full release
-  ./set-version.sh 2.11.0 beta      # pre-release with label
-  ```
-
-  Files updated by the script:
-  - `org.rssowl.core/META-INF/MANIFEST.MF`
-  - `org.rssowl.ui/META-INF/MANIFEST.MF`
-  - `org.rssowl.core.tests/META-INF/MANIFEST.MF`
-  - `org.rssowl.lib.httpclient/META-INF/MANIFEST.MF`
-  - All `feature.xml` and `category.xml` files
-  - `releng/product/rssowlnix.product`
-  - `releng/product_manual_export/rssowlnix.product`
-  - `org.rssowl.ui/config.ini`
-  - `org.rssowl.ui/plugin.xml`
+- **JVM heap tuned for faster startup**
+  Initial heap increased from `-Xms15m` to `-Xms128m`. G1GC and tiered
+  compilation flags added to reduce startup latency.
 
 ---
 
-# 2.10.0-beta
-- runs with java 17,21 [#116](https://github.com/Xyrio/RSSOwlnix/issues/116)
-- updated to eclipse rcp 4.30
+## [2.10.0] - upstream baseline
+
+See [Xyrio/RSSOwlnix](https://github.com/Xyrio/RSSOwlnix) for changes prior to this fork.
+
+- runs with Java 17, 21
+- updated to Eclipse RCP 4.30
 - updated httpclient to 5.5
-- removed auto reload of feeds without any data and error on viewing feed or the folder(s) feed is in [#118](https://github.com/Xyrio/RSSOwlnix/issues/118)
-- added RSSOWLNIX_USER_AGENT system property to change the User-Agent used when requesting feeds to match demands of websites for popular browsers [#164](https://github.com/Xyrio/RSSOwlnix/issues/164)
-- changed name reverse sorting to reverse only word positions so that numbers are sorted as usual
-- change dead feedvalidator.org to validator.w3.org [#124](https://github.com/Xyrio/RSSOwlnix/issues/124)
-- fix BookMark.setLastRecentNewsDate(Date) not allowing null [#178](https://github.com/Xyrio/RSSOwlnix/issues/178)
-
-# 2.9.0-beta
-- runs also with java 15, **does not run with java 16 [#116](https://github.com/Xyrio/RSSOwlnix/issues/116)** 
-- added more internal information to: Feed / Properties / Status
-- added group feeds by: Latest Date (Modified,Published,Received), Last Update date of feed
-- added JSON Feed 1.1 support as described by [jsonfeed.org](https://jsonfeed.org) [example](https://jsonfeed.org/feed.json) [#68](https://github.com/Xyrio/RSSOwlnix/issues/68) [PR#98](https://github.com/Xyrio/RSSOwlnix/pull/98)
-- added feeds:// for https:// (also feed:https:// is still supported)
-- improvement to keep http or https accordingly when reconstructing urls (favico,etc)
-- support more media tags from youtube, peertube [#74](https://github.com/Xyrio/RSSOwlnix/issues/74)
-- fixed missing description when <content:encode> exists but has no text to not overwrite what was already loaded from <description> [#56](https://github.com/Xyrio/RSSOwlnix/issues/56)
-- updated share links: removed Mister Wong, Google+ and added BibSonomy [#95](https://github.com/Xyrio/RSSOwlnix/issues/95)
-- fixed progress button at bottom right to show new Download & Activities view (eclipse ProgressView) toggleable from Menu/View/Downloads & Activity. Kept old view at Menu/Tools/Downloads & Activity for now. [#45](https://github.com/Xyrio/RSSOwlnix/issues/45)
-- changed page size preference for newspaper/headlines view to be setable to any value [#91](https://github.com/Xyrio/RSSOwlnix/issues/91)
-- fixed missing Overview/Network Connections in Preferrences [#67](https://github.com/Xyrio/RSSOwlnix/issues/67)
-
-# 2.8.0-beta
-- improved favico search
-- updated httpclient to 4.5.12
-- added shell:// protocol for feed links to retrieve or transform rss using external scripts or programs. example shell://python html2rss.py https://website/
-
-# 2.7.1-beta
-- runs also with java 13, 14
-- fixed null news in feed when doing cleanup [#64](https://github.com/Xyrio/RSSOwlnix/issues/64)
-- fixed different behaviour when adding new feed from toolbar [#42](https://github.com/Xyrio/RSSOwlnix/issues/42)
-- updated rssowl news to use RSSOwlnix's update.rss [PR#59](https://github.com/Xyrio/RSSOwlnix/pull/59)
-
-# 2.7.0-beta
-- runs also with java 12
-- updated eclipse rcp to 4.9.1 (last rcp supporting 32bit) (no babel localization for 4.9+)
-- Added Telegram to options for sharing links [#33](https://github.com/Xyrio/RSSOwlnix/issues/33) [PR#38](https://github.com/Xyrio/RSSOwlnix/pull/38)
-
-# 2.6.1-beta
-- fixed wrong sticky news counting when doing a cleanup [#22](https://github.com/Xyrio/RSSOwlnix/issues/22)
-
-# 2.6.0-beta
-- fixed some website authentication and authentication secure storage related bugs since updating httpclient to 4.x
-- added support for feed links using https like `feed:https://host/rss.xml` ( https://en.wikipedia.org/wiki/Feed_URI_scheme )
-- added right to left sorting for search dialog title column too
-
-# 2.5.5-beta
-- fixed type check for preferences
-
-# 2.5.4-beta
-- updated httpclient to 4.5.6
-
-# 2.5.3-beta
-- updated eclipse rcp to 4.7.3a
-
-# 2.5.2-beta
-- fixed missing 256x256 program logo icon [#14](https://github.com/Xyrio/RSSOwlnix/issues/14)
-
-# 2.5.1-beta
-- added right to left sorting for title column of classic view (appends "<-" to Title column)
-- linux: do not force xulrunner [PR#21](https://github.com/Xyrio/RSSOwlnix/pull/21)
-
-# 2.5.0-beta
-- main program is now updateable (addons and translation available through Help/Install new Software...) * does not work correctly
-- renamed to RSSOwlnix
-- updated httpclient to 4.5.5
-- updated eclipse rcp to 4.7.2
-
-# 2.4.0-beta
-- removed old update manager and added new p2 one (addons work so far)
-
-# 2.3.0-beta
-- runs also with java 9
-- https websites which needed JCE should work without it when jre 9+ is used. https://sourceforge.net/p/rssowl/discussion/296910/thread/6dc4a203/
-- updated eclipse rcp to 4.7
-- updated httpclient to 4.5.3
-- fixed 2 (maybe) memory leaks
-
-based on RSSOwl 2.2.1
+- removed auto reload of feeds without data on error
+- added `RSSOWLNIX_USER_AGENT` system property
+- changed dead feedvalidator.org to validator.w3.org
+- various bug fixes (see upstream changelog)
 
