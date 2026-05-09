@@ -903,79 +903,23 @@ public class Controller {
         /* Only one Login Dialog at the same time */
         if (shellAr[0] != null && !shellAr[0].isDisposed()) {
           final boolean isSynchronizedFeed = SyncUtils.isSynchronized(bookmark);
-          boolean openLoginDialog = false;
+          final AuthenticationRequiredException authEx = (AuthenticationRequiredException) e;
 
-          /* Normal Feed (one Login Dialog per feed) */
+          /* Normal Feed: acquire lock unconditionally, release in finally */
           if (!isSynchronizedFeed) {
             fLoginDialogLock.lock();
-            openLoginDialog = true;
-          }
-
-          /* Synchronized Feed (only open login dialog once) */
-          else {
-            openLoginDialog = fLoginDialogLock.tryLock();
-          }
-
-          /* Open Login Dialog.
-           * The cast cannot throw here (e is already verified as
-           * AuthenticationRequiredException by the enclosing catch block).
-           * The inner try/finally guarantees the lock is released.
-           * Resolves CodeQL alerts #9/#10 (unreleased lock, CWE-764). */
-          final AuthenticationRequiredException authEx = (AuthenticationRequiredException) e;
-          if (openLoginDialog) {
             try {
-              JobRunner.runSyncedInUIThread(shellAr[0], new Runnable() {
-                @Override
-                public void run() {
+              openLoginDialogInternal(shellAr[0], monitor, bookmark, feedLink, authEx, isSynchronizedFeed);
+              return Status.OK_STATUS;
+            } finally {
+              fLoginDialogLock.unlock();
+            }
+          }
 
-                  /* Return on Cancelation or shutdown or deletion */
-                  if (!shouldProceedReloading(monitor, bookmark))
-                    return;
-
-                  /* Credentials might have been provided meanwhile in another dialog */
-                  if (!isSynchronizedFeed) {
-                    try {
-                      URI normalizedUri = URIUtils.normalizeUri(feedLink, true);
-                      if (Owl.getConnectionService().getAuthCredentials(normalizedUri, authEx.getRealm()) != null) {
-                        reloadQueued(bookmark, null, shellAr[0]);
-                        return;
-                      }
-                    } catch (CredentialsException exe) {
-                      Activator.getDefault().getLog().log(exe.getStatus());
-                    }
-                  }
-
-                  /* Show Login Dialog */
-                  int status = -1;
-                  if (isSynchronizedFeed)
-                    status = OwlUI.openSyncLogin(shellAr[0]);
-                  else
-                    status = new LoginDialog(shellAr[0], feedLink, authEx.getRealm()).open();
-
-                  /* Remember time when user hit cancel from a Google Reader login challenge */
-                  if (status == Window.CANCEL && isSynchronizedFeed)
-                    fLastGoogleLoginCancel.set(System.currentTimeMillis());
-
-                  /* Trigger another Reload if credentials have been provided */
-                  if (status == Window.OK && shouldProceedReloading(monitor, bookmark)) {
-
-                    /* Store info about Realm in Bookmark */
-                    if (StringUtils.isSet(authEx.getRealm())) {
-                      bookmark.setProperty(BM_REALM_PROPERTY, authEx.getRealm());
-                      fBookMarkDAO.save(bookmark);
-                    }
-
-                    /* Re-Reload Bookmark */
-                    reloadQueued(bookmark, null, shellAr[0]);
-                  }
-
-                  /* Update Error Flag if user hit Cancel */
-                  else if (shouldProceedReloading(monitor, bookmark) && !bookmark.isErrorLoading()) {
-                    updateErrorLoading(bookmark, authEx);
-                  }
-                }
-              });
-
+          /* Synchronized Feed: only open dialog if we win the tryLock race */
+          else if (fLoginDialogLock.tryLock()) {
+            try {
+              openLoginDialogInternal(shellAr[0], monitor, bookmark, feedLink, authEx, isSynchronizedFeed);
               return Status.OK_STATUS;
             } finally {
               fLoginDialogLock.unlock();
@@ -1015,6 +959,67 @@ public class Controller {
     }
 
     return Status.OK_STATUS;
+  }
+
+  /**
+   * Opens the login dialog for the given bookmark on the UI thread.
+   * The caller is responsible for acquiring and releasing fLoginDialogLock
+   * before and after calling this method (CWE-764).
+   */
+  private void openLoginDialogInternal(final Shell shell, final IProgressMonitor monitor,
+      final IBookMark bookmark, final URI feedLink,
+      final AuthenticationRequiredException authEx, final boolean isSynchronizedFeed) {
+    JobRunner.runSyncedInUIThread(shell, new Runnable() {
+      @Override
+      public void run() {
+
+        /* Return on Cancelation or shutdown or deletion */
+        if (!shouldProceedReloading(monitor, bookmark))
+          return;
+
+        /* Credentials might have been provided meanwhile in another dialog */
+        if (!isSynchronizedFeed) {
+          try {
+            URI normalizedUri = URIUtils.normalizeUri(feedLink, true);
+            if (Owl.getConnectionService().getAuthCredentials(normalizedUri, authEx.getRealm()) != null) {
+              reloadQueued(bookmark, null, shell);
+              return;
+            }
+          } catch (CredentialsException exe) {
+            Activator.getDefault().getLog().log(exe.getStatus());
+          }
+        }
+
+        /* Show Login Dialog */
+        int status = -1;
+        if (isSynchronizedFeed)
+          status = OwlUI.openSyncLogin(shell);
+        else
+          status = new LoginDialog(shell, feedLink, authEx.getRealm()).open();
+
+        /* Remember time when user hit cancel from a Google Reader login challenge */
+        if (status == Window.CANCEL && isSynchronizedFeed)
+          fLastGoogleLoginCancel.set(System.currentTimeMillis());
+
+        /* Trigger another Reload if credentials have been provided */
+        if (status == Window.OK && shouldProceedReloading(monitor, bookmark)) {
+
+          /* Store info about Realm in Bookmark */
+          if (StringUtils.isSet(authEx.getRealm())) {
+            bookmark.setProperty(BM_REALM_PROPERTY, authEx.getRealm());
+            fBookMarkDAO.save(bookmark);
+          }
+
+          /* Re-Reload Bookmark */
+          reloadQueued(bookmark, null, shell);
+        }
+
+        /* Update Error Flag if user hit Cancel */
+        else if (shouldProceedReloading(monitor, bookmark) && !bookmark.isErrorLoading()) {
+          updateErrorLoading(bookmark, authEx);
+        }
+      }
+    });
   }
 
   private void updateErrorLoading(final IBookMark bookmark, final AuthenticationRequiredException authEx) {
@@ -2057,4 +2062,5 @@ public class Controller {
     });
   }
 }
+
 
