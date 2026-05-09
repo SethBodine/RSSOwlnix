@@ -48,8 +48,8 @@ public class TranslateRSSOwlAction implements IWorkbenchWindowActionDelegate {
    */
   @Override
   public void run(IAction action) {
-    //TODO change tranlation wiki link here and also in FAQ at https://github.com/Xyrio/RSSOwlnix/wiki/FAQ#item_langtrans
-    BrowserUtils.openLinkExternal("http://wiki.rssowl.org/index.php/Translation"); //$NON-NLS-1$
+    //TODO change translation wiki link here and also in FAQ at https://github.com/SethBodine/RSSOwlnix/wiki/FAQ
+    BrowserUtils.openLinkExternal("https://github.com/SethBodine/RSSOwlnix/wiki"); //$NON-NLS-1$
   }
 
   /*

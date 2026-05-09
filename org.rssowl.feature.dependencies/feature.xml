@@ -3,7 +3,7 @@
       id="org.rssowl.dependencies"
       label="RSSOwlnix Dependencies"
       version="2.10.1.qualifier"
-      provider-name="https://github.com/Xyrio/RSSOwlnix">
+      provider-name="https://github.com/SethBodine/RSSOwlnix">
 
    <description>
       RSSOwlnix Dependencies (feature)
@@ -414,3 +414,4 @@ litigation.
          unpack="false"/>
 
 </feature>
+
