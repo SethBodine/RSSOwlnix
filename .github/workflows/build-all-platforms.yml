@@ -150,6 +150,15 @@ jobs:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
 
     steps:
+      - name: Checkout repository (for CHANGELOG.md and script)
+        uses: actions/checkout@v5
+
+      - name: Generate updates.rss from CHANGELOG.md
+        run: |
+          bash generate-updates-rss.sh CHANGELOG.md updates.rss
+          echo "--- generated feed preview ---"
+          head -40 updates.rss
+
       - name: Download P2 program site artifact
         uses: actions/download-artifact@v8
         with:
@@ -191,5 +200,15 @@ jobs:
           publish_dir: p2-addons
           destination_dir: update/addons
           keep_files: true
+
+      - name: Deploy updates.rss to GitHub Pages root
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          include_files: updates.rss
+          destination_dir: .
+          keep_files: true
+
 
 
