@@ -5,7 +5,9 @@ A powerful RSS/Atom/RDF feed reader based on Eclipse RCP, forked from [Xyrio/RSS
 > **Latest release: [2.10.2-beta](https://github.com/SethBodine/RSSOwlnix/releases/latest)**
 > Includes security fixes (CWE-78, CWE-22, CWE-327), bug fixes for toolbar separators, tray startup and Lucene startup errors, and a live P2 update site.
 
-> **In development (unreleased):** Stale-feed filters  surface feeds with no successful fetch or no new post in a configurable number of days, directly from the feed explorer toolbar.
+> **In development (unreleased):**
+> - **Stale-feed filters**  surface feeds with no successful fetch or no new post in a configurable number of days, directly from the feed explorer toolbar.
+> - **Bug fixes**  saved-search state lost on restart (#26); Source/Feed search labels swapped (#129); Twitter/X telemetry opens external browser (#62); progress bar stuck at 99% (#61); Lucene index corruption cascade (#99); GDI handle exhaustion crash after prolonged use (#94, #131); every other item skipped when navigating a feed upward (#50).
 
 ##  Upgrade note for 2.10.2-beta
 

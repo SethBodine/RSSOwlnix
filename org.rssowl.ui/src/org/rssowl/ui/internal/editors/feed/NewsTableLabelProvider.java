@@ -153,6 +153,20 @@ public class NewsTableLabelProvider extends OwnerDrawLabelProvider {
     fColumnModel = model;
   }
 
+  /**
+   * Bug #94/#131: Dispose all GDI resources held by this label provider.
+   * Without this override the LocalResourceManager is never released, causing
+   * GDI handle exhaustion (SWTError: No more handles) after prolonged use.
+   */
+  @Override
+  public void dispose() {
+    super.dispose();
+    if (fResources != null) {
+      fResources.dispose();
+      fResources = null;
+    }
+  }
+
   void updateResources() {
 
     /* Sticky Color */
@@ -576,14 +590,6 @@ public class NewsTableLabelProvider extends OwnerDrawLabelProvider {
   }
 
   /*
-   * @see org.eclipse.jface.viewers.IBaseLabelProvider#dispose()
-   */
-  @Override
-  public void dispose() {
-    fResources.dispose();
-  }
-
-  /*
    * @see org.eclipse.jface.viewers.IBaseLabelProvider#isLabelProperty(java.lang.Object,
    * java.lang.String)
    */
@@ -754,3 +760,4 @@ public class NewsTableLabelProvider extends OwnerDrawLabelProvider {
     /* Ignore */
   }
 }
+

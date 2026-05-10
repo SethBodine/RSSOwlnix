@@ -251,8 +251,16 @@ public class Indexer {
       if (!fFlushRequired)
         return true;
 
-      dispose();
-      createIndexWriter(false);
+      /* Bug #99: if the index is corrupt, dispose() may throw after
+       * nulling fIndexWriter (see dispose() finally block). In that case
+       * we recreate the writer with clearIndex=true to recover. */
+      boolean clearIndex = false;
+      try {
+        dispose();
+      } catch (PersistenceException e) {
+        clearIndex = true; // Index is corrupt; start fresh
+      }
+      createIndexWriter(clearIndex);
       saveCommittedNews(false, new EntityIdsByEventType(fUncommittedNews));
       fUncommittedNews.clear();
     }
@@ -552,14 +560,19 @@ public class Indexer {
     if (fIndexWriter == null)
       return;
 
+    /* Bug #99: Always null out fIndexWriter in a finally block.
+     * If close() throws (e.g. Lucene BitVector corruption), the writer is
+     * internally closed by Lucene but our field still references it, causing
+     * AlreadyClosedException on every subsequent index operation. Nulling in
+     * finally ensures callers can safely recreate the writer. */
     try {
       fIndexWriter.close();
     } catch (IOException e) {
       throw new PersistenceException(e);
+    } finally {
+      fIndexWriter = null;
+      fFlushRequired = false;
     }
-
-    fIndexWriter = null;
-    fFlushRequired = false;
   }
 
   private static void saveCommittedNews(boolean sync, final EntityIdsByEventType uncommittedNews) {

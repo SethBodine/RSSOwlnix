@@ -2482,8 +2482,21 @@ public class FeedView extends EditorPart implements IReusableEditor {
     /* Selection is Present */
     if (respectSelection && tree.getSelectionCount() > 0) {
 
+      /* Bug #50: After a viewer refresh (e.g. triggered by mark-as-read), the SWT
+       * tree's widget-level selection may be stale relative to the JFace logical
+       * selection. Cross-check both and prefer the JFace selection so that
+       * navigation (especially upward) always starts from the item the user last
+       * explicitly chose, preventing every-other-item skipping in the browser. */
+      TreeItem startItem = tree.getSelection()[0];
+      IStructuredSelection jfaceSel = (IStructuredSelection) fNewsTableControl.getViewer().getSelection();
+      if (!jfaceSel.isEmpty() && startItem.getData() != jfaceSel.getFirstElement()) {
+        TreeItem corrected = findTreeItem(tree, jfaceSel.getFirstElement());
+        if (corrected != null)
+          startItem = corrected;
+      }
+
       /* Try navigating from Selection */
-      ITreeNode startingNode = new WidgetTreeNode(tree.getSelection()[0], fNewsTableControl.getViewer());
+      ITreeNode startingNode = new WidgetTreeNode(startItem, fNewsTableControl.getViewer());
       if (navigate(startingNode, next, unread))
         return true;
     }
@@ -2516,6 +2529,21 @@ public class FeedView extends EditorPart implements IReusableEditor {
     }
 
     return false;
+  }
+
+  /* Bug #50: find the SWT TreeItem whose data matches the given model object,
+   * searching both root items and their direct children (group rows). */
+  private static TreeItem findTreeItem(Tree tree, Object data) {
+    for (TreeItem root : tree.getItems()) {
+      if (root.getData() == data)
+        return root;
+      for (int i = 0; i < root.getItemCount(); i++) {
+        TreeItem child = root.getItem(i);
+        if (child.getData() == data)
+          return child;
+      }
+    }
+    return null;
   }
 
   private boolean isValidNavigation(ITreeNode node, boolean unread) {
@@ -2578,3 +2606,4 @@ public class FeedView extends EditorPart implements IReusableEditor {
     return false;
   }
 }
+

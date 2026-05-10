@@ -599,7 +599,8 @@ public class SearchConditionItem extends Composite {
           });
 
           /* Provide auto-complete for Categories, Authors and Feeds */
-          if (field.getId() == INews.CATEGORIES || field.getId() == INews.AUTHOR || field.getId() == INews.FEED) {
+          /* Bug #129: include SOURCE so feed-name proposals appear for the renamed "Feed Name" field */
+          if (field.getId() == INews.CATEGORIES || field.getId() == INews.AUTHOR || field.getId() == INews.FEED || field.getId() == INews.SOURCE) {
             controlDeco.setDescriptionText(Messages.SearchConditionItem_CONTENT_ASSIST_INFO);
             final Pair<SimpleContentProposalProvider, ContentProposalAdapter> pair = OwlUI.hookAutoComplete(text, null, false, true);
 
@@ -619,7 +620,7 @@ public class SearchConditionItem extends Composite {
                     values.addAll(fDaoService.getCategoryDAO().loadAllNames());
                   else if (field.getId() == INews.AUTHOR)
                     values.addAll(fDaoService.getPersonDAO().loadAllNames());
-                  else if (field.getId() == INews.FEED)
+                  else if (field.getId() == INews.FEED || field.getId() == INews.SOURCE)
                     values.addAll(CoreUtils.getFeedLinks());
 
                   /* Apply Proposals */
@@ -676,7 +677,7 @@ public class SearchConditionItem extends Composite {
     /* Restore Default Control Decoration */
     else {
       deco.setImage(FieldDecorationRegistry.getDefault().getFieldDecoration(FieldDecorationRegistry.DEC_CONTENT_PROPOSAL).getImage());
-      if (field.getId() == INews.CATEGORIES || field.getId() == INews.AUTHOR || field.getId() == INews.FEED)
+      if (field.getId() == INews.CATEGORIES || field.getId() == INews.AUTHOR || field.getId() == INews.FEED || field.getId() == INews.SOURCE)
         deco.setDescriptionText(Messages.SearchConditionItem_CONTENT_ASSIST_INFO);
       else
         deco.setDescriptionText(Messages.SearchConditionItem_SEARCH_HELP);

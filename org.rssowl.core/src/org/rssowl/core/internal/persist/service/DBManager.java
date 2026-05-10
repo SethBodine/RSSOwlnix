@@ -45,6 +45,7 @@ import org.rssowl.core.internal.persist.Label;
 import org.rssowl.core.internal.persist.News;
 import org.rssowl.core.internal.persist.NewsBin;
 import org.rssowl.core.internal.persist.Preference;
+import org.rssowl.core.internal.persist.SearchCondition;
 import org.rssowl.core.internal.persist.SearchFilter;
 import org.rssowl.core.internal.persist.migration.MigrationResult;
 import org.rssowl.core.internal.persist.migration.Migrations;
@@ -1438,6 +1439,12 @@ public class DBManager {
     config.objectClass(Preference.class).objectField("fKey").indexed(true); //$NON-NLS-1$
     config.objectClass(SearchFilter.class).objectField("fActions").cascadeOnDelete(true); //$NON-NLS-1$
 
+    /* Bug #26: ensure SearchCondition's value (e.g. EnumSet<INews.State>) is fully
+     * activated and persisted when loaded/saved from db4o. Without these lines the
+     * stored State set comes back null/empty after restart. */
+    config.objectClass(SearchCondition.class).objectField("fValue").cascadeOnActivate(true); //$NON-NLS-1$
+    config.objectClass(SearchCondition.class).objectField("fValue").cascadeOnUpdate(true); //$NON-NLS-1$
+
     if (isIBM_VM_1_6()) //See defect 733
       config.objectClass("java.util.MiniEnumSet").translate(new com.db4o.config.TSerializable()); //$NON-NLS-1$
 
@@ -1631,6 +1638,7 @@ public class DBManager {
     }
   }
 }
+
 
 
 
