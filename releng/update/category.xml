@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/org.rssowl.dependencies.updater_2.10.1.qualifier.jar" id="org.rssowl.dependencies.updater" version="2.10.1.qualifier">
+      <category name="rssowlnix.program"/>
+   </feature>
+   <feature url="features/org.rssowl.dependencies_2.10.1.qualifier.jar" id="org.rssowl.dependencies" version="2.10.1.qualifier">
+      <category name="rssowlnix.program"/>
+   </feature>
+   <feature url="features/org.rssowl_2.10.1.qualifier.jar" id="org.rssowl" version="2.10.1.qualifier">
+      <category name="rssowlnix.program"/>
+   </feature>
+   <category-def name="rssowlnix.program" label="RSSOwlnix Update"/>
+   <repository-reference location="https://SethBodine.github.io/RSSOwlnix/update/program" enabled="true" />
+</site>
+

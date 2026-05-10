@@ -1,0 +1,23 @@
+# P2 transport instructions for RSSOwlnix update site
+#
+# Requires HTTPS for all P2 transport connections:
+#   - HTTPS redirects from the GitHub Pages CDN are followed provided TLS
+#     certificate verification passes
+#   - Plain HTTP connections are refused entirely (no fallback, no downgrade)
+#   - Redirects from HTTPS to HTTP are blocked
+#
+# These properties are read by org.eclipse.ecf.provider.filetransfer at
+# update check time and enforced before any bytes are transferred.
+
+properties.1.name = org.eclipse.equinox.p2.follow.redirects
+properties.1.value = true
+
+properties.2.name = org.eclipse.equinox.p2.trust.redirected.https
+properties.2.value = true
+
+properties.3.name = org.eclipse.equinox.p2.allow.http.redirect.from.https
+properties.3.value = false
+
+properties.4.name = org.eclipse.equinox.p2.https.only
+properties.4.value = true
+

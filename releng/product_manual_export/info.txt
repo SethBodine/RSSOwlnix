@@ -1,0 +1,10 @@
+almost fully the same as the product file for automatic builds. 
+
+(product file opened with notepad)
+except features do not have installMode="root" for the manual export.  
+
+like 
+auto build:
+      <feature id="org.rssowl" installMode="root"/>
+manual build:
+      <feature id="org.rssowl"/>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <!-- Add-on features will be listed here when available.
+        This repository is intentionally empty and exists to prevent
+        P2 client errors when checking for installed software sites. -->
+   <category-def name="rssowlnix.addons" label="RSSOwlnix Add-ons"/>
+</site>
+

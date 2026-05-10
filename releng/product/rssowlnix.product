@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?pde version="3.5"?>
+
+<product name="RSSOwlnix Product" uid="org.rssowl.ui.product" id="org.rssowl.ui.product" application="org.rssowl.ui.rssowl" version="2.10.1" type="features" includeLaunchers="true" autoIncludeRequirements="true">
+
+   <aboutInfo>
+      <image path="/org.rssowl.ui/icons/product/about.gif"/>
+      <text>
+         RSSOwlnix fork of RSSOwl
+
+Version: 2.10.1-beta
+Build Id: 2026-05-05
+
+RSSOwlnix and RSSOwl is licensed under the terms of the Eclipse Public License version 1.0.
+http://www.rssowl.org/legal/epl-v10.html
+
+(c) Copyright RSSOwl contributors and others 2005-2011.  All rights reserved.
+      </text>
+   </aboutInfo>
+
+   <configIni use="default">
+      <linux>../../org.rssowl.ui/config.ini</linux>
+      <macosx>../../org.rssowl.ui/config.ini</macosx>
+      <win32>../../org.rssowl.ui/config.ini</win32>
+   </configIni>
+
+   <launcherArgs>
+      <vmArgs>-Xms128m -Xmx192m -Dosgi.requiredJavaVersion=17 -Djava.util.Arrays.useLegacyMergeSort=true
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+-XX:TieredStopAtLevel=1
+-XX:+UseG1GC
+      </vmArgs>
+   </launcherArgs>
+
+   <windowImages i16="/org.rssowl.ui/icons/product/16x16.png" i32="/org.rssowl.ui/icons/product/32x32.png" i48="/org.rssowl.ui/icons/product/48x48.png" i64="/org.rssowl.ui/icons/product/64x64.png" i128="/org.rssowl.ui/icons/product/128x128.png" i256="/org.rssowl.ui/icons/product/256x256.png"/>
+
+   <launcher name="RSSOwlnix">
+      <linux icon="../../org.rssowl.ui/icons/product/rssowl.xpm"/>
+      <macosx icon="../../org.rssowl.ui/icons/product/rssowl.icns"/>
+      <win useIco="true">
+         <ico path="../../org.rssowl.ui/icons/product/rssowl.ico"/>
+         <bmp/>
+      </win>
+   </launcher>
+
+
+   <vm>
+   </vm>
+
+   <license>
+        <url>http://www.rssowl.org/legal/epl-v10.html</url>
+        <text>
+   Copyright notice                                            
+(c) 2005-2011 RSSOwl Development Team                       
+http://www.rssowl.org/                                      
+All rights reserved                                         
+This program and the accompanying materials are made available
+under   
+the terms of the Eclipse Public License v1.0 which accompanies
+this    
+distribution, and is available at:                          
+http://www.rssowl.org/legal/epl-v10.html                    
+A copy is found in the file epl-v10.html and important notices
+to the  
+license from the team is found in the textfile LICENSE.txt distributed
+in this package.                                            
+This copyright notice MUST APPEAR in all copies of the file!
+Contributors:                                               
+RSSOwl Development Team - initial API and implementation
+         </text>
+   </license>
+
+   <plugins>
+   </plugins>
+
+   <features>
+      <feature id="org.rssowl" installMode="root"/>
+      <feature id="org.rssowl.dependencies" installMode="root"/>
+      <feature id="org.rssowl.dependencies.updater" installMode="root"/>
+   </features>
+
+
+   <repositories>
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/program" name="RSSOwlnix Updates" enabled="true" />
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/nls" name="RSSOwlnix Language Packs" enabled="true" />
+      <repository location="https://SethBodine.github.io/RSSOwlnix/update/addons" name="RSSOwlnix Add-ons" enabled="true" />
+   </repositories>
+
+   <preferencesInfo>
+      <targetfile overwrite="false"/>
+   </preferencesInfo>
+
+   <cssInfo>
+   </cssInfo>
+
+</product>
+
