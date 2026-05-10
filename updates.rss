@@ -5,18 +5,13 @@
     <link>https://sethbodine.github.io/RSSOwlnix</link>
     <description>Release notes and in-progress changes for RSSOwlnix.</description>
     <language>en</language>
-    <lastBuildDate>Sun, 10 May 2026 05:56:59 GMT</lastBuildDate>
+    <lastBuildDate>Sun, 10 May 2026 08:18:47 GMT</lastBuildDate>
     <atom:link href="https://sethbodine.github.io/RSSOwlnix/updates.rss" rel="self" type="application/rss+xml"/>
-    <item>
-      <title>RSSOwlnix  Unreleased changes (2026-05-10)</title>
-      <link>https://github.com/SethBodine/RSSOwlnix/blob/main/CHANGELOG.md</link>
-      <guid isPermaLink="false">https://github.com/SethBodine/RSSOwlnix/unreleased/600c1f8</guid>
-      <pubDate>Sun, 10 May 2026 00:00:00 GMT</pubDate>
-      <description><![CDATA[
-Nothing currently pending.
-
----]]></description>
-    </item>
+    <image>
+      <url>https://sethbodine.github.io/RSSOwlnix/rssowl.png</url>
+      <title>RSSOwlnix Updates</title>
+      <link>https://sethbodine.github.io/RSSOwlnix</link>
+    </image>
     <item>
       <title>RSSOwlnix 2.10.2-beta</title>
       <link>https://github.com/SethBodine/RSSOwlnix/releases/tag/v2.10.2-beta</link>
@@ -114,8 +109,6 @@ Nothing currently pending.
   workflow, and enabled the `security-extended` query suite. Node.js 20
   deprecation warnings resolved across all workflows.
   `.github/workflows/codeql.yml`
-
----
 
 ### Security (additional - CodeQL batch 2)
 
@@ -303,9 +296,7 @@ Nothing currently pending.
 
 - **JVM heap tuned for faster startup**
   Initial heap increased from `-Xms15m` to `-Xms128m`. G1GC and tiered
-  compilation flags added to reduce startup latency.
-
----]]></description>
+  compilation flags added to reduce startup latency.]]></description>
     </item>
   </channel>
 </rss>
