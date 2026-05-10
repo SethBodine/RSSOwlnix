@@ -1,16 +1,6 @@
 # Changelog
 
-## [Unreleased]
-
-### Bug Fixes
-
-- **GDI handle exhaustion after prolonged use** (#94/#131)
-  `NewsTableLabelProvider` had two `dispose()` methods  the original at the
-  bottom of the class (no null guard, no `super.dispose()`) and a corrected
-  version added near the top (null-guards `fResources`, calls `super.dispose()`).
-  The duplicate caused a compile failure. The old version has been removed;
-  the corrected version is retained.
-  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableLabelProvider.java`
+## [2.10.2-beta] - 2026-05-10
 
 ### New Features
 
@@ -46,9 +36,16 @@
 
 ---
 
-## [2.10.2-beta] - 2026-05-08
 
 ### Bug Fixes
+
+- **GDI handle exhaustion after prolonged use** (#94/#131)
+  `NewsTableLabelProvider` had two `dispose()` methods  the original at the
+  bottom of the class (no null guard, no `super.dispose()`) and a corrected
+  version added near the top (null-guards `fResources`, calls `super.dispose()`).
+  The duplicate caused a compile failure. The old version has been removed;
+  the corrected version is retained.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableLabelProvider.java`
 
 - **Lucene `maxClauseCount` error dialog on startup** (#142)
   An error dialog was shown on first launch for users with many feeds because
