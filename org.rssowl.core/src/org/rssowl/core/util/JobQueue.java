@@ -54,7 +54,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JobQueue {
 
   /* Helper for the Progress Monitor */
-  private static final double TOTAL_TASK_WORK_LOAD = 9900;
+  /* Bug #61: TOTAL_TASK_WORK_LOAD was 9900/10000 = 99%, so the progress bar
+   * could never visually reach 100%. Both constants are now equal so the
+   * convergence series targets the full work load. */
+  private static final double TOTAL_TASK_WORK_LOAD = 10000;
   private static final double TOTAL_PROGRESS_WORK_LOAD = 10000;
 
   /* Delay in ms for the Progress Job to update the Monitor */
