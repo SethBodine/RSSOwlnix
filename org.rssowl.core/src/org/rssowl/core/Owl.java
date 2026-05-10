@@ -59,7 +59,7 @@ import org.rssowl.core.util.LongOperationMonitor;
 public final class Owl {
 
   public static final String APPLICATION_NAME = "RSSOwlnix"; //$NON-NLS-1$
-  public static final String SPLASH_VERSION = "2.10.1-beta"; //$NON-NLS-1$
+  public static final String SPLASH_VERSION = "2.10.2-beta"; //$NON-NLS-1$
   public static final String HOMEPAGE = "https://github.com/SethBodine/RSSOwlnix"; //$NON-NLS-1$
   public static final String ISSUES_URL = "https://github.com/SethBodine/RSSOwlnix/issues"; //$NON-NLS-1$
   public static final String WIKI_URL = "https://github.com/SethBodine/RSSOwlnix/wiki"; //$NON-NLS-1$
