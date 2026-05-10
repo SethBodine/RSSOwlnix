@@ -162,12 +162,55 @@ HEADER
     pub_date=$(date -u -d "$date_raw" +"%a, %d %b %Y 00:00:00 GMT" 2>/dev/null \
                || date -u -j -f "%Y-%m-%d" "$date_raw" +"%a, %d %b %Y 00:00:00 GMT")
 
-    # Strip CR, horizontal rules, trailing whitespace; condense consecutive blank lines
+    # Convert markdown to basic HTML for readable rendering in RSS readers.
+    # Pipeline:
+    #   1. Strip CR and trailing whitespace, remove horizontal rules
+    #   2. ### / ## headings  -> <h3> / <h2>
+    #   3. **bold**           -> <strong>
+    #   4. `code`             -> <code>
+    #   5. Bullet lines       -> <ul><li> blocks
+    #   6. Blank lines        -> <br><br> paragraph breaks
     clean_body=$(printf '%s' "$body" \
       | tr -d '\r' \
-      | sed '/^---*$/d' \
       | sed 's/[[:space:]]*$//' \
-      | cat -s)
+      | sed '/^---*$/d' \
+      | sed 's/^### \(.*\)$/<h3>\1<\/h3>/' \
+      | sed 's/^## \(.*\)$/<h2>\1<\/h2>/' \
+      | sed 's/\*\*\([^*]*\)\*\*/<strong>\1<\/strong>/g' \
+      | sed "s/\`\([^\`]*\)\`/<code>\1<\/code>/g" \
+      | awk '
+          /^[[:space:]]*- / {
+            if (pending_li != "") { printf "  <li>%s</li>\n", pending_li; pending_li="" }
+            if (!in_ul) { printf "<ul>\n"; in_ul=1 }
+            sub(/^[[:space:]]*- /, "")
+            pending_li=$0
+            next
+          }
+          in_ul && /^[[:space:]]+[^[:space:]]/ {
+            # indented continuation line  append to current li
+            sub(/^[[:space:]]+/, " ")
+            pending_li=pending_li $0
+            next
+          }
+          {
+            if (pending_li != "") { printf "  <li>%s</li>\n", pending_li; pending_li="" }
+            if (in_ul) { printf "</ul>\n"; in_ul=0 }
+            print
+          }
+          END {
+            if (pending_li != "") printf "  <li>%s</li>\n", pending_li
+            if (in_ul) printf "</ul>\n"
+          }
+        ' \
+      | awk '
+          BEGIN { prev_blank=0 }
+          /^[[:space:]]*$/ { prev_blank=1; next }
+          {
+            if (prev_blank && NR > 1) printf "<br><br>\n"
+            prev_blank=0
+            print
+          }
+        ')
 
     # Determine item link and guid
     if [[ "$version" == "Unreleased" ]]; then
@@ -201,4 +244,5 @@ ITEM
 } > "$OUTPUT"
 
 echo "Written $OUTPUT  (${#versions[@]} section(s): ${versions[*]})"
+
 
