@@ -848,11 +848,6 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor {
     fTrayMenu.setVisible(true);
   }
 
-  private void onSingleClick(Shell shell) {
-    NotificationService service = Controller.getDefault().getNotificationService();
-    List<INews> newsToShow = new ArrayList<>();
-    Mode mode = Mode.RECENT;
-
   /* CodeQL #19/#20/#21 (TOCTOU, CWE-367): isPopupVisible() and show() are not
    * wrapped in a single lock here deliberately. This method runs exclusively on
    * the SWT UI thread (invoked from a tray ToolItem SelectionListener), and
