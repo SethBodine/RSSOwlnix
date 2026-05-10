@@ -72,9 +72,13 @@ current_body=""
 in_section=false
 
 flush_section() {
-  # Only keep sections that have real content (not just whitespace/placeholders)
+  # Only keep sections with real content (strip CR, blanks, hrules, and placeholder text first)
   local content_check
-  content_check=$(printf '%s' "$current_body" | sed '/^[[:space:]]*$/d' | grep -v "^Nothing currently pending" || true)
+  content_check=$(printf '%s' "$current_body" \
+    | tr -d '\r' \
+    | sed '/^[[:space:]]*$/d' \
+    | sed '/^---*$/d' \
+    | grep -iv "nothing currently pending" || true)
   if [[ -n "$current_version" && -n "$content_check" ]]; then
     versions+=("$current_version")
     dates+=("$current_date")
@@ -153,8 +157,9 @@ HEADER
     pub_date=$(date -u -d "$date_raw" +"%a, %d %b %Y 00:00:00 GMT" 2>/dev/null \
                || date -u -j -f "%Y-%m-%d" "$date_raw" +"%a, %d %b %Y 00:00:00 GMT")
 
-    # Strip horizontal rules and trailing whitespace; condense consecutive blank lines
+    # Strip CR, horizontal rules, trailing whitespace; condense consecutive blank lines
     clean_body=$(printf '%s' "$body" \
+      | tr -d '\r' \
       | sed '/^---*$/d' \
       | sed 's/[[:space:]]*$//' \
       | cat -s)
