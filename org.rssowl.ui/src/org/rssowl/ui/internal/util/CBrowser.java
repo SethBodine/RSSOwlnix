@@ -120,7 +120,12 @@ public class CBrowser {
   private static final int SET_FEATURE_ON_PROCESS = 0x2;
 
   /* Blacklist of common iframes that cause external window opening */
-  private static final List<String> EXTERNAL_BLACKLIST = Arrays.asList("ipv6/exp/iframe.html", "/plugins/like.php", "scribd.com/embeds", "youtube.com/embed/"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+  /* Bug #62: Twitter/X telemetry URLs must not open in the external browser.
+   * Legacy twitter.com and rebranded x.com domains are both covered. */
+  private static final List<String> EXTERNAL_BLACKLIST = Arrays.asList(
+      "ipv6/exp/iframe.html", "/plugins/like.php", "scribd.com/embeds", "youtube.com/embed/", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+      "syndication.twitter.com/i/jot", "platform.twitter.com/jot.html", //$NON-NLS-1$ //$NON-NLS-2$
+      "syndication.x.com/i/jot", "platform.x.com/jot.html"); //$NON-NLS-1$ //$NON-NLS-2$
 
   /* Count failing JS executions and log as appropiate */
   private static final AtomicInteger FAILING_JS_COUNTER = new AtomicInteger();
