@@ -146,6 +146,11 @@ BUILD_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S GMT")
     <language>en</language>
     <lastBuildDate>$BUILD_DATE</lastBuildDate>
     <atom:link href="$FEED_LINK/updates.rss" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>$FEED_LINK/rssowl.png</url>
+      <title>$(xml_escape "$FEED_TITLE")</title>
+      <link>$FEED_LINK</link>
+    </image>
 HEADER
 
   for i in "${!versions[@]}"; do

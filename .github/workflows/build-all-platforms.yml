@@ -159,6 +159,9 @@ jobs:
           echo "--- generated feed preview ---"
           head -40 updates.rss
 
+      - name: Copy feed icon
+        run: cp org.rssowl.ui/icons/product/256x256.png rssowl.png
+
       - name: Download P2 program site artifact
         uses: actions/download-artifact@v8
         with:
@@ -201,12 +204,12 @@ jobs:
           destination_dir: update/addons
           keep_files: true
 
-      - name: Deploy updates.rss to GitHub Pages root
+      - name: Deploy updates.rss and feed icon to GitHub Pages root
         uses: peaceiris/actions-gh-pages@v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
-          include_files: updates.rss
+          include_files: updates.rss,rssowl.png
           destination_dir: .
           keep_files: true
 
