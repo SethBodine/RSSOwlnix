@@ -5,6 +5,8 @@ A powerful RSS/Atom/RDF feed reader based on Eclipse RCP, forked from [Xyrio/RSS
 > **Latest release: [2.10.2-beta](https://github.com/SethBodine/RSSOwlnix/releases/latest)**
 > Includes security fixes (CWE-78, CWE-22, CWE-327), bug fixes for toolbar separators, tray startup and Lucene startup errors, and a live P2 update site.
 
+> **In development (unreleased):** Stale-feed filters  surface feeds with no successful fetch or no new post in a configurable number of days, directly from the feed explorer toolbar.
+
 ##  Upgrade note for 2.10.2-beta
 
 If you use a **master password** to protect feed credentials, your saved passwords will not be readable after upgrading. This is a side effect of replacing the broken MD5 digest with SHA-512 for key derivation. Before upgrading, go to **Preferences  Credentials  Reset** to clear stored credentials  you will be prompted to re-enter them once after the update. Users relying on Windows DPAPI or macOS Keychain are unaffected.
@@ -48,4 +50,5 @@ Security vulnerabilities should be reported via [GitHub Security Advisories](htt
 ## Upstream
 
 This fork is based on [Xyrio/RSSOwlnix](https://github.com/Xyrio/RSSOwlnix) which is itself based on RSSOwl 2.2.1.
+
 

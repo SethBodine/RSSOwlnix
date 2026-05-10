@@ -2,7 +2,37 @@
 
 ## [Unreleased]
 
-Nothing currently pending.
+### New Features
+
+- **Stale-feed filters in the feed explorer**
+  Two new filter options added to the feed explorer toolbar filter menu,
+  allowing feeds that have gone quiet to be surfaced quickly for review or
+  cleanup.
+
+  - **No Successful Fetch In...**  shows feeds whose last successful HTTP
+    fetch is older than a user-specified number of days. Feeds that have never
+    been fetched successfully (e.g. added but not yet refreshed) are excluded.
+    Uses `getLastUpdateDate()`, which is set by `TrackingBL` on every
+    successful reload.
+
+  - **No New Post In...**  shows feeds whose most recent post date is older
+    than a user-specified number of days. Feeds that have never had a post are
+    excluded. Uses `getLastRecentNewsDate()`, which reflects the `pubDate` of
+    the newest item ever seen in that feed.
+
+  Selecting either filter opens a small input dialog where you type the number
+  of days (must be a positive integer). The current threshold is shown in the
+  menu label, e.g. *"No New Post In... (30 days)"*. The value is remembered
+  across restarts via the new `BE_FILTER_DAYS` preference key and shared
+  between both filter types.
+
+  Files changed:
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/BookMarkFilter.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/BookMarkExplorer.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/Messages.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/messages.properties`
+  `org.rssowl.core/src/org/rssowl/core/persist/pref/Preference.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/pref/DefaultPreferences.java`
 
 ---
 
@@ -299,4 +329,5 @@ See [Xyrio/RSSOwlnix](https://github.com/Xyrio/RSSOwlnix) for changes prior to t
 - added `RSSOWLNIX_USER_AGENT` system property
 - changed dead feedvalidator.org to validator.w3.org
 - various bug fixes (see upstream changelog)
+
 

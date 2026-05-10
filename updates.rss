@@ -5,13 +5,51 @@
     <link>https://sethbodine.github.io/RSSOwlnix</link>
     <description>Release notes and in-progress changes for RSSOwlnix.</description>
     <language>en</language>
-    <lastBuildDate>Sun, 10 May 2026 08:18:47 GMT</lastBuildDate>
+    <lastBuildDate>Sun, 10 May 2026 10:53:51 GMT</lastBuildDate>
     <atom:link href="https://sethbodine.github.io/RSSOwlnix/updates.rss" rel="self" type="application/rss+xml"/>
     <image>
       <url>https://sethbodine.github.io/RSSOwlnix/rssowl.png</url>
       <title>RSSOwlnix Updates</title>
       <link>https://sethbodine.github.io/RSSOwlnix</link>
     </image>
+    <item>
+      <title>RSSOwlnix  Unreleased changes (2026-05-10)</title>
+      <link>https://github.com/SethBodine/RSSOwlnix/blob/main/CHANGELOG.md</link>
+      <guid isPermaLink="false">https://github.com/SethBodine/RSSOwlnix/unreleased/2af7093</guid>
+      <pubDate>Sun, 10 May 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[
+### New Features
+
+- **Stale-feed filters in the feed explorer**
+  Two new filter options added to the feed explorer toolbar filter menu,
+  allowing feeds that have gone quiet to be surfaced quickly for review or
+  cleanup.
+
+  - **No Successful Fetch In...**  shows feeds whose last successful HTTP
+    fetch is older than a user-specified number of days. Feeds that have never
+    been fetched successfully (e.g. added but not yet refreshed) are excluded.
+    Uses `getLastUpdateDate()`, which is set by `TrackingBL` on every
+    successful reload.
+
+  - **No New Post In...**  shows feeds whose most recent post date is older
+    than a user-specified number of days. Feeds that have never had a post are
+    excluded. Uses `getLastRecentNewsDate()`, which reflects the `pubDate` of
+    the newest item ever seen in that feed.
+
+  Selecting either filter opens a small input dialog where you type the number
+  of days (must be a positive integer). The current threshold is shown in the
+  menu label, e.g. *"No New Post In... (30 days)"*. The value is remembered
+  across restarts via the new `BE_FILTER_DAYS` preference key and shared
+  between both filter types.
+
+  Files changed:
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/BookMarkFilter.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/BookMarkExplorer.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/Messages.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/views/explorer/messages.properties`
+  `org.rssowl.core/src/org/rssowl/core/persist/pref/Preference.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/pref/DefaultPreferences.java`]]></description>
+    </item>
     <item>
       <title>RSSOwlnix 2.10.2-beta</title>
       <link>https://github.com/SethBodine/RSSOwlnix/releases/tag/v2.10.2-beta</link>
