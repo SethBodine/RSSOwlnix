@@ -41,6 +41,7 @@ import org.rssowl.core.util.StringMatcher;
 
 import java.text.BreakIterator;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -75,7 +76,19 @@ public class BookMarkFilter extends ViewerFilter {
     SHOW_NEVER_VISITED,
 
     /** Show sticky Feeds */
-    SHOW_STICKY
+    SHOW_STICKY,
+
+    /**
+     * Show feeds that have not had a successful fetch (lastUpdateDate) within
+     * the past N days. Feeds that have never been fetched are excluded.
+     */
+    SHOW_WITHOUT_RECENT_FETCH,
+
+    /**
+     * Show feeds whose most recent post date (lastRecentNewsDate) is older than
+     * N days. Feeds that have never had a post are excluded.
+     */
+    SHOW_WITHOUT_RECENT_POST
   }
 
   /** Possible Search Targets */
@@ -93,6 +106,12 @@ public class BookMarkFilter extends ViewerFilter {
 
   /* Current Filter Value */
   private Type fType = Type.SHOW_ALL;
+
+  /**
+   * Number of days used by the time-based filter types
+   * (SHOW_WITHOUT_RECENT_FETCH, SHOW_WITHOUT_RECENT_POST). Default is 30.
+   */
+  private int fFilterDays = 30;
 
   /* Current Search Target */
   private SearchTarget fSearchTarget = SearchTarget.NAME;
@@ -172,6 +191,27 @@ public class BookMarkFilter extends ViewerFilter {
   }
 
   /**
+   * Set the number of days used by the time-based filter types
+   * ({@link Type#SHOW_WITHOUT_RECENT_FETCH} and
+   * {@link Type#SHOW_WITHOUT_RECENT_POST}). Must be a positive integer.
+   *
+   * @param days number of days; values &lt;= 0 are ignored
+   */
+  public void setFilterDays(int days) {
+    if (days > 0)
+      fFilterDays = days;
+  }
+
+  /**
+   * Get the number of days used by the time-based filter types.
+   *
+   * @return the current day threshold (default 30)
+   */
+  int getFilterDays() {
+    return fFilterDays;
+  }
+
+  /**
    * The pattern string for which this filter should select elements in the
    * viewer.
    *
@@ -221,7 +261,8 @@ public class BookMarkFilter extends ViewerFilter {
       if (fMatcher != null)
         return true;
 
-      if (fType == Type.SHOW_NEVER_VISITED || fType == Type.SHOW_ERRONEOUS)
+      if (fType == Type.SHOW_NEVER_VISITED || fType == Type.SHOW_ERRONEOUS
+          || fType == Type.SHOW_WITHOUT_RECENT_FETCH || fType == Type.SHOW_WITHOUT_RECENT_POST)
         return true;
     }
 
@@ -337,7 +378,38 @@ public class BookMarkFilter extends ViewerFilter {
         case SHOW_NEVER_VISITED:
           isMatch = newsmark.getPopularity() <= 0;
           break;
-      }
+
+        /* Show: Feeds with no successful fetch in the past N days */
+        case SHOW_WITHOUT_RECENT_FETCH:
+          if (newsmark instanceof IBookMark) {
+            // getLastUpdateDate() is set on every successful fetch by TrackingBL
+            Date lastUpdateDate = newsmark.getLastUpdateDate();
+            if (lastUpdateDate == null) {
+              // Never been successfully fetched  exclude per requirements
+              isMatch = false;
+            } else {
+              long cutoffMs = System.currentTimeMillis() - ((long) fFilterDays * 24L * 60L * 60L * 1000L);
+              isMatch = lastUpdateDate.getTime() < cutoffMs;
+            }
+          }
+          break;
+
+        /* Show: Feeds whose newest post is older than N days */
+        case SHOW_WITHOUT_RECENT_POST:
+          if (newsmark instanceof IBookMark) {
+            // getLastRecentNewsDate() is the pubDate of the newest item ever seen
+            Date lastRecentNews = ((IBookMark) newsmark).getLastRecentNewsDate();
+            if (lastRecentNews == null) {
+              // Never had a post  exclude per requirements
+              isMatch = false;
+            } else {
+              long cutoffMs = System.currentTimeMillis() - ((long) fFilterDays * 24L * 60L * 60L * 1000L);
+              isMatch = lastRecentNews.getTime() < cutoffMs;
+            }
+          }
+          break;
+
+      } // end switch
 
       /* Finally check the Pattern */
       if (isMatch && fMatcher != null) {

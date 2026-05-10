@@ -60,6 +60,12 @@ public class Messages extends NLS {
   public static String BookMarkExplorer_SHOW_NEW;
   public static String BookMarkExplorer_SHOW_STICKY;
   public static String BookMarkExplorer_SHOW_UNREAD;
+  public static String BookMarkExplorer_SHOW_WITHOUT_RECENT_FETCH;
+  public static String BookMarkExplorer_SHOW_WITHOUT_RECENT_POST;
+  public static String BookMarkExplorer_FILTER_DAYS_SUFFIX;
+  public static String BookMarkExplorer_FILTER_DAYS_TITLE;
+  public static String BookMarkExplorer_FILTER_DAYS_MSG;
+  public static String BookMarkExplorer_FILTER_DAYS_INVALID;
   public static String BookMarkExplorer_SORT_BY_NAME;
   public static String BookMarkGrouping_BOOKMARKS;
   public static String BookMarkGrouping_EARLIER_WEEK;
@@ -90,3 +96,4 @@ public class Messages extends NLS {
     NLS.initializeMessages(BUNDLE_NAME, Messages.class);
   }
 }
+

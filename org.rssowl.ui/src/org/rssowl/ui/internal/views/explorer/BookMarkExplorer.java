@@ -34,6 +34,9 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.dialogs.IInputValidator;
+import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.window.Window;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.LocalSelectionTransfer;
@@ -190,6 +193,7 @@ public class BookMarkExplorer extends ViewPart {
   private boolean fAlwaysShowSearch;
   private boolean fSortByName;
   private BookMarkFilter.Type fFilterType;
+  private int fFilterDays = 30; // default threshold for time-based filters
   private BookMarkGrouping.Type fGroupingType;
   private IFolder fSelectedBookMarkSet;
   private boolean fLinkingEnabled;
@@ -324,6 +328,7 @@ public class BookMarkExplorer extends ViewPart {
     /* Apply Filter */
     fBookMarkFilter = new BookMarkFilter();
     fBookMarkFilter.setType(fFilterType);
+    fBookMarkFilter.setFilterDays(fFilterDays);
     fViewer.addFilter(fBookMarkFilter);
 
     /* Create Grouper */
@@ -841,6 +846,9 @@ public class BookMarkExplorer extends ViewPart {
         new MenuItem(menu, SWT.SEPARATOR);
         createFilterOption(menu, Messages.BookMarkExplorer_SHOW_ERROR, BookMarkFilter.Type.SHOW_ERRONEOUS);
         createFilterOption(menu, Messages.BookMarkExplorer_SHOW_NEVER_VISITED, BookMarkFilter.Type.SHOW_NEVER_VISITED);
+        new MenuItem(menu, SWT.SEPARATOR);
+        createTimedFilterOption(menu, Messages.BookMarkExplorer_SHOW_WITHOUT_RECENT_FETCH, BookMarkFilter.Type.SHOW_WITHOUT_RECENT_FETCH);
+        createTimedFilterOption(menu, Messages.BookMarkExplorer_SHOW_WITHOUT_RECENT_POST, BookMarkFilter.Type.SHOW_WITHOUT_RECENT_POST);
         return menu;
       }
 
@@ -853,6 +861,47 @@ public class BookMarkExplorer extends ViewPart {
           public void widgetSelected(SelectionEvent e) {
             if (menuItem.getSelection() && fBookMarkFilter.getType() != bookMarkFilterType)
               refreshFilter(bookMarkFilterType);
+          }
+        });
+      }
+
+      /**
+       * Creates a radio menu item for a time-based filter type. Selecting it
+       * opens an InputDialog so the user can specify the number of days.
+       */
+      private void createTimedFilterOption(Menu menu, String text, BookMarkFilter.Type bookMarkFilterType) {
+        final MenuItem menuItem = new MenuItem(menu, SWT.RADIO);
+        menuItem.setText(text + " (" + fFilterDays + " " + Messages.BookMarkExplorer_FILTER_DAYS_SUFFIX + ")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        menuItem.setSelection(bookMarkFilterType == fBookMarkFilter.getType());
+        menuItem.addSelectionListener(new SelectionAdapter() {
+          @Override
+          public void widgetSelected(SelectionEvent e) {
+            if (!menuItem.getSelection())
+              return;
+
+            /* Ask the user for a day count */
+            InputDialog dlg = new InputDialog(
+                fViewSite.getShell(),
+                Messages.BookMarkExplorer_FILTER_DAYS_TITLE,
+                Messages.BookMarkExplorer_FILTER_DAYS_MSG,
+                String.valueOf(fFilterDays),
+                value -> {
+                  try {
+                    int n = Integer.parseInt(value.trim());
+                    return n > 0 ? null : Messages.BookMarkExplorer_FILTER_DAYS_INVALID;
+                  } catch (NumberFormatException ex) {
+                    return Messages.BookMarkExplorer_FILTER_DAYS_INVALID;
+                  }
+                });
+
+            if (dlg.open() == Window.OK) {
+              fFilterDays = Integer.parseInt(dlg.getValue().trim());
+              fBookMarkFilter.setFilterDays(fFilterDays);
+              if (fBookMarkFilter.getType() != bookMarkFilterType)
+                refreshFilter(bookMarkFilterType);
+              else
+                fViewer.refresh(false); // same filter type, just new day count
+            }
           }
         });
       }
@@ -1695,6 +1744,7 @@ public class BookMarkExplorer extends ViewPart {
       fGlobalPreferences.putBoolean(DefaultPreferences.BE_ENABLE_LINKING, fLinkingEnabled);
       fGlobalPreferences.putBoolean(DefaultPreferences.BE_DISABLE_FAVICONS, !fFaviconsEnabled);
       fGlobalPreferences.putInteger(DefaultPreferences.BE_FILTER_TYPE, fBookMarkFilter.getType().ordinal());
+      fGlobalPreferences.putInteger(DefaultPreferences.BE_FILTER_DAYS, fFilterDays);
       fGlobalPreferences.putInteger(DefaultPreferences.BE_GROUP_TYPE, fBookMarkGrouping.getType().ordinal());
     }
   }
@@ -1723,6 +1773,8 @@ public class BookMarkExplorer extends ViewPart {
     fLinkingEnabled = fGlobalPreferences.getBoolean(DefaultPreferences.BE_ENABLE_LINKING);
     fFaviconsEnabled = !fGlobalPreferences.getBoolean(DefaultPreferences.BE_DISABLE_FAVICONS);
     fFilterType = BookMarkFilter.Type.values()[fGlobalPreferences.getInteger(DefaultPreferences.BE_FILTER_TYPE)];
+    int savedDays = fGlobalPreferences.getInteger(DefaultPreferences.BE_FILTER_DAYS);
+    fFilterDays = savedDays > 0 ? savedDays : 30; // fall back to 30 if not yet stored
     fGroupingType = BookMarkGrouping.Type.values()[fGlobalPreferences.getInteger(DefaultPreferences.BE_GROUP_TYPE)];
 
     String selectedBookMarkSetPref = getSelectedBookMarkSetPref(fViewSite.getWorkbenchWindow());

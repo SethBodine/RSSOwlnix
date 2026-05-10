@@ -175,6 +175,9 @@ public enum Preference {
   /** BookMark Explorer */
   BE_FILTER_TYPE("org.rssowl.ui.internal.views.explorer.FilterType", IPreferenceType.INTEGER), //$NON-NLS-1$
 
+  /** BookMark Explorer - number of days for time-based filters */
+  BE_FILTER_DAYS("org.rssowl.ui.internal.views.explorer.FilterDays", IPreferenceType.INTEGER), //$NON-NLS-1$
+
   /** BookMark Explorer */
   BE_GROUP_TYPE("org.rssowl.ui.internal.views.explorer.GroupingType", IPreferenceType.INTEGER), //$NON-NLS-1$
 

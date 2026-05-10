@@ -178,6 +178,9 @@ public class DefaultPreferences {
   /** BookMark Explorer */
   public static final String BE_FILTER_TYPE = Preference.BE_FILTER_TYPE.id();
 
+  /** BookMark Explorer - number of days for time-based filters (default 30) */
+  public static final String BE_FILTER_DAYS = Preference.BE_FILTER_DAYS.id();
+
   /** BookMark Explorer */
   public static final String BE_GROUP_TYPE = Preference.BE_GROUP_TYPE.id();
 
