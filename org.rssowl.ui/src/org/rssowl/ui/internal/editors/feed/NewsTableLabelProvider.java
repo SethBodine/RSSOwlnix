@@ -590,14 +590,6 @@ public class NewsTableLabelProvider extends OwnerDrawLabelProvider {
   }
 
   /*
-   * @see org.eclipse.jface.viewers.IBaseLabelProvider#dispose()
-   */
-  @Override
-  public void dispose() {
-    fResources.dispose();
-  }
-
-  /*
    * @see org.eclipse.jface.viewers.IBaseLabelProvider#isLabelProperty(java.lang.Object,
    * java.lang.String)
    */
@@ -768,3 +760,4 @@ public class NewsTableLabelProvider extends OwnerDrawLabelProvider {
     /* Ignore */
   }
 }
+
