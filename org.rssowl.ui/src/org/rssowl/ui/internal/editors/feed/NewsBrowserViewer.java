@@ -292,12 +292,13 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
            *
            * "divPosY < scrollPosY" : Top Border of News is above top scroll position
            * "lastNewsPosY < scrollPosY + windowHeight" : Last news is visible
+           * "lastNewsPosY == 0" : Single item at top of viewport (no scrollbar needed)
            */
           js.append("node = document.getElementById('").append(Dynamic.NEWS.getId(id)).append("'); "); //$NON-NLS-1$//$NON-NLS-2$
           js.append("  if (node) {"); //$NON-NLS-1$
           js.append("    var divPosY = node.offsetTop; "); //$NON-NLS-1$
           js.append("    var divHeight = node.offsetHeight; "); //$NON-NLS-1$
-          js.append("    if (divPosY < scrollPosY || (lastNewsPosY > 0 && lastNewsPosY < scrollPosY + windowHeight)) {"); //$NON-NLS-1$
+          js.append("    if (divPosY < scrollPosY || (lastNewsPosY >= 0 && lastNewsPosY < scrollPosY + windowHeight)) {"); //$NON-NLS-1$
           js.append("      newsIds = newsIds + '").append(id).append(",'; "); //$NON-NLS-1$ //$NON-NLS-2$
           js.append("    }"); //$NON-NLS-1$
           js.append("  }"); //$NON-NLS-1$
@@ -1789,7 +1790,7 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
 
     /* Set URL if its not already showing and contains a display-operation */
     String inputUrl = fServer.toUrl(fId, input);
-    if (fServer.isDisplayOperation(inputUrl) && !inputUrl.equals(url))
+    if (fServer.isDisplayOperation(inputUrl) && (force || !inputUrl.equals(url)))
       fBrowser.setUrl(inputUrl);
 
     /* Hide the Browser as soon as the input is set to Null */
