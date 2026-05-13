@@ -218,8 +218,15 @@ public class NewsBrowserControl implements IFeedViewPart {
   }
 
   private void onInfoBarClicked() {
-    boolean moveToTop = OwlUI.getPageSize(fInputPreferences) == 0; //Only move to top when paging is disabled
-    fViewer.refresh(true, moveToTop); //Refresh will take care of closing the info bar
+    /*
+     * Force a full re-render of the current input. Using fViewer.refresh() is
+     * not sufficient here: if the browser URL already matches the input URL the
+     * browser's no-op guard silently does nothing, leaving the view blank.
+     * Calling home() (which calls internalSetInput with force=true) bypasses
+     * that guard and always reloads the page from the application server.
+     */
+    setInfoBarVisible(false);
+    fViewer.home();
   }
 
   /**
@@ -518,3 +525,4 @@ public class NewsBrowserControl implements IFeedViewPart {
     fViewer.getControl().setFocus();
   }
 }
+
