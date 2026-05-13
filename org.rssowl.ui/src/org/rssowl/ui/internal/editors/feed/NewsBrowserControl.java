@@ -34,6 +34,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.LocationAdapter;
 import org.eclipse.swt.browser.LocationEvent;
+import org.eclipse.swt.browser.ProgressEvent;
+import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.browser.StatusTextEvent;
 import org.eclipse.swt.browser.StatusTextListener;
 import org.eclipse.swt.events.MouseAdapter;
@@ -219,13 +221,44 @@ public class NewsBrowserControl implements IFeedViewPart {
 
   private void onInfoBarClicked() {
     /*
-     * Force a full re-render of the current input. Using fViewer.refresh() is
-     * not sufficient here: if the browser URL already matches the input URL the
-     * browser's no-op guard silently does nothing, leaving the view blank.
-     * Calling home() (which calls internalSetInput with force=true) bypasses
-     * that guard and always reloads the page from the application server.
+     * Capture the current scroll position before reloading so the view does
+     * not jump to the top. We read scrollTop synchronously via execute(), then
+     * register a one-shot ProgressListener that restores it after the new page
+     * has finished loading.
+     *
+     * home() calls internalSetInput(force=true) which unconditionally calls
+     * setUrl(), causing the ApplicationServer to rebuild the page from the
+     * current content provider state (including newly arrived items). This is
+     * the correct path  refresh() / fBrowser.refresh() does NOT cause the
+     * server to regenerate the page.
      */
     setInfoBarVisible(false);
+
+    final Browser browser = (Browser) fViewer.getControl();
+
+    /* Read current scroll position synchronously */
+    final long[] scrollY = { 0 };
+    Object result = browser.evaluate("return document.body.scrollTop || document.documentElement.scrollTop;"); //$NON-NLS-1$
+    if (result instanceof Number)
+      scrollY[0] = ((Number) result).longValue();
+
+    /* Register one-shot listener to restore scroll after reload completes */
+    if (scrollY[0] > 0) {
+      browser.addProgressListener(new ProgressListener() {
+        @Override
+        public void changed(ProgressEvent event) {
+          // not needed
+        }
+
+        @Override
+        public void completed(ProgressEvent event) {
+          browser.removeProgressListener(this);
+          if (!browser.isDisposed())
+            browser.execute("document.body.scrollTop=" + scrollY[0] + "; document.documentElement.scrollTop=" + scrollY[0] + ";"); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+      });
+    }
+
     fViewer.home();
   }
 
