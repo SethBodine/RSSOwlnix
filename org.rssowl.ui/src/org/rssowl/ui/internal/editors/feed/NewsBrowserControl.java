@@ -254,7 +254,7 @@ public class NewsBrowserControl implements IFeedViewPart {
         public void completed(ProgressEvent event) {
           browser.removeProgressListener(this);
           if (!browser.isDisposed())
-            browser.execute("document.body.scrollTop=" + scrollY[0] + "; document.documentElement.scrollTop=" + scrollY[0] + ";"); //$NON-NLS-1$ //$NON-NLS-2$
+            browser.execute("document.body.scrollTop=" + scrollY[0] + "; document.documentElement.scrollTop=" + scrollY[0] + ";"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         }
       });
     }
