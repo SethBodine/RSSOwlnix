@@ -1,5 +1,45 @@
 # Changelog
 
+## [Unreleased]
+
+### Bug Fixes
+
+- **Single-item newspaper view never marked as read without scrollbar**
+  In newspaper layout, if a feed contained only one item and the page had no
+  scrollbar, the item was never automatically marked as read regardless of how
+  long the user viewed it. The `UserInteractionTask` scroll-detection condition
+  used `lastNewsPosY > 0` to gate the mark-read logic  which always fails when
+  the item sits at the top of the page (`offsetTop == 0`). Changed to
+  `lastNewsPosY >= 0` so a single fully-visible item at position zero is
+  correctly treated as read after the configured delay.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java`
+
+- **Info bar "new items" refresh showed blank screen or stale content**
+  Clicking the info bar notification that new items had arrived either produced
+  a blank page or showed the same content with no new items included. Two
+  separate problems: (1) the previous `refresh(true, moveToTop)` path used
+  `fBrowser.refresh()` which reloads from the browser cache rather than asking
+  the application server to regenerate the page, so new items were never
+  included; (2) the page reload discarded the user's scroll position, jumping
+  the view to the top. Fixed by replacing the reload path with `home()` (which
+  calls `internalSetInput(force=true)`, forcing the server to rebuild the page
+  from current content), and capturing `scrollTop` before the reload and
+  restoring it via a one-shot `ProgressListener` after the page finishes
+  loading.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserControl.java`
+
+- **Switching feeds A  B  A failed to re-render the newspaper view**
+  Navigating from feed A to feed B and back to A sometimes left the newspaper
+  view stale or blank. The `internalSetInput` method guarded against redundant
+  `setUrl` calls using `!inputUrl.equals(currentUrl)`  but after ABA the
+  browser URL already matched A's URL from the first visit, so the guard
+  silently skipped the `setUrl` call and the page was not re-rendered. Fixed
+  by bypassing the URL equality check when `force=true`, ensuring the page is
+  always regenerated when explicitly requested.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java`
+
+---
+
 ## [2.10.2-beta] - 2026-05-10
 
 ### New Features
