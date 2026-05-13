@@ -278,6 +278,17 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
         js.append("  var newsIds = ''; "); //$NON-NLS-1$
         js.append("  var lastNewsPosY = lastNews.offsetTop; "); //$NON-NLS-1$
         js.append("  var lastNewsHeight = lastNews.offsetHeight; "); //$NON-NLS-1$
+
+        /*
+         * At-bottom detection: if the scrollbar has reached the very bottom of
+         * the page (scrollPosY + windowHeight >= document.body.scrollHeight),
+         * mark ALL remaining visible unread items as read unconditionally.
+         * This handles the case where the last item is taller than the window
+         * or where fast scrolling caused intermediate events to be debounced
+         * away  ensuring reaching the bottom always clears all unread items.
+         */
+        js.append("  var atBottom = (scrollPosY + windowHeight) >= (document.body.scrollHeight - 2); "); //$NON-NLS-1$
+
         for (Long id : visibleUnreadNews) {
           if (fMarkedUnreadByUserCache.contains(id))
             continue; //Skip those news explicitly marked as unread by the user
@@ -290,15 +301,15 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
           /*
            * Conditions under which a news gets marked as read:
            *
+           * "atBottom" : Scrollbar is at the very bottom  mark everything
            * "divPosY < scrollPosY" : Top Border of News is above top scroll position
-           * "lastNewsPosY < scrollPosY + windowHeight" : Last news is visible
-           * "lastNewsPosY == 0" : Single item at top of viewport (no scrollbar needed)
+           * "lastNewsPosY >= 0 && lastNewsPosY < scrollPosY + windowHeight" : Last news is visible
            */
           js.append("node = document.getElementById('").append(Dynamic.NEWS.getId(id)).append("'); "); //$NON-NLS-1$//$NON-NLS-2$
           js.append("  if (node) {"); //$NON-NLS-1$
           js.append("    var divPosY = node.offsetTop; "); //$NON-NLS-1$
           js.append("    var divHeight = node.offsetHeight; "); //$NON-NLS-1$
-          js.append("    if (divPosY < scrollPosY || (lastNewsPosY >= 0 && lastNewsPosY < scrollPosY + windowHeight)) {"); //$NON-NLS-1$
+          js.append("    if (atBottom || divPosY < scrollPosY || (lastNewsPosY >= 0 && lastNewsPosY < scrollPosY + windowHeight)) {"); //$NON-NLS-1$
           js.append("      newsIds = newsIds + '").append(id).append(",'; "); //$NON-NLS-1$ //$NON-NLS-2$
           js.append("    }"); //$NON-NLS-1$
           js.append("  }"); //$NON-NLS-1$
@@ -401,11 +412,20 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
     if (!fIsEmbedded || (!fMarkReadOnScrolling && fPageSize == 0))
       return;
 
-    /* Return if disposed or already running */
-    if (fBrowser.getControl().isDisposed() || fUserInteractionTracker.isRunning())
+    /* Return if disposed */
+    if (fBrowser.getControl().isDisposed())
       return;
 
-    /* Tell the tracker about user interaction*/
+    /*
+     * Do NOT guard on fUserInteractionTracker.isRunning() here. The JobTracker
+     * already debounces by cancelling any pending job before rescheduling with
+     * the current task. Guarding on isRunning() causes fast-scroll events to be
+     * silently dropped  the tracker only fires once at the 500ms mark from the
+     * first event, capturing scroll position at that instant and missing all
+     * items scrolled past in the interim. Removing the guard means every scroll
+     * event reschedules the task, so it always evaluates the final scroll
+     * position after the user pauses.
+     */
     fUserInteractionTracker.run(new UserInteractionTask(fViewModel, fBrowser));
   }
 

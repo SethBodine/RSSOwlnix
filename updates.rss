@@ -5,7 +5,7 @@
     <link>https://sethbodine.github.io/RSSOwlnix</link>
     <description>Release notes and in-progress changes for RSSOwlnix.</description>
     <language>en</language>
-    <lastBuildDate>Wed, 13 May 2026 08:08:24 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 13 May 2026 08:18:35 GMT</lastBuildDate>
     <atom:link href="https://sethbodine.github.io/RSSOwlnix/updates.rss" rel="self" type="application/rss+xml"/>
     <image>
       <url>https://sethbodine.github.io/RSSOwlnix/rssowl.png</url>
@@ -15,7 +15,7 @@
     <item>
       <title>RSSOwlnix  Unreleased changes (2026-05-13)</title>
       <link>https://github.com/SethBodine/RSSOwlnix/blob/main/CHANGELOG.md</link>
-      <guid isPermaLink="false">https://github.com/SethBodine/RSSOwlnix/unreleased/9deb502</guid>
+      <guid isPermaLink="false">https://github.com/SethBodine/RSSOwlnix/unreleased/8d4b6fc</guid>
       <pubDate>Wed, 13 May 2026 00:00:00 GMT</pubDate>
       <description><![CDATA[<br><br>
 <h3>Bug Fixes</h3>
