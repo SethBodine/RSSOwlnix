@@ -74,7 +74,13 @@ public enum SearchSpecifier implements IPersistable {
   CONTAINS_ALL,
 
   /** Location Scope */
-  SCOPE;
+  SCOPE,
+
+  /** Target must match the Value as a Java regular expression */
+  MATCHES_REGEX,
+
+  /** Target must NOT match the Value as a Java regular expression */
+  MATCHES_REGEX_NOT;
 
   /**
    * Get a human-readable representation of the specifier to be used in the UI
@@ -110,6 +116,10 @@ public enum SearchSpecifier implements IPersistable {
         return Messages.SearchSpecifier_IS_SIMILAR_TO;
       case SCOPE:
         return Messages.SearchSpecifier_IS;
+      case MATCHES_REGEX:
+        return Messages.SearchSpecifier_MATCHES_REGEX;
+      case MATCHES_REGEX_NOT:
+        return Messages.SearchSpecifier_MATCHES_REGEX_NOT;
       default:
         return super.toString();
     }
@@ -123,7 +133,7 @@ public enum SearchSpecifier implements IPersistable {
    * <code>IS_NOT</code> or <code>CONTAINS_NOT</code>.
    */
   public boolean isNegation() {
-    return (this == IS_NOT) || (this == CONTAINS_NOT);
+    return (this == IS_NOT) || (this == CONTAINS_NOT) || (this == MATCHES_REGEX_NOT);
   }
 
   /**

@@ -41,6 +41,8 @@ public class Messages extends NLS {
   public static String LocationControl_SELECT_ALL;
   public static String SearchConditionItem_CONTAINS_ANY;
   public static String SearchConditionItem_CONTENT_ASSIST_INFO;
+  public static String SearchConditionItem_ERROR_INVALID_REGEX;
+  public static String SearchConditionItem_MATCHES_REGEX_TOOLTIP;
   public static String SearchConditionItem_DAYS;
   public static String SearchConditionItem_ERROR_PHRASE_AND_WILDCARD_SEARCH;
   public static String SearchConditionItem_FALSE;
