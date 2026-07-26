@@ -700,53 +700,15 @@ public class NewsTableControl implements IFeedViewPart {
     PlatformUI.getWorkbench().getThemeManager().addPropertyChangeListener(fPropertyChangeListener);
 
     /*
-     * Mark items as read when they scroll out of the viewport. Items bypassed
-     * by dragging the scrollbar are treated as "seen" and marked read using
-     * the same setNewsState path as a normal selection, but immediately
-     * (without delay) because the user has already scrolled past them.
+     * NOTE: List/Classic layouts (this control) intentionally do NOT mark
+     * items as read on scrolling, mouse wheel, or key navigation. Marking as
+     * read here only happens via selection (click / arrow-key selection
+     * change) and the configured MARK_READ_IN_MILLIS delay, handled by
+     * onSelectionChanged() and fNewsStateTracker. Scroll-triggered mark-read
+     * is reserved for the Newspaper/Headlines browser view
+     * (NewsBrowserViewer#fMarkReadOnScrolling), which only applies to
+     * Layout.NEWSPAPER.
      */
-    final Tree scrollTree = fViewer.getTree();
-    ScrollBar verticalBar = scrollTree.getVerticalBar();
-    if (verticalBar != null) {
-      verticalBar.addListener(SWT.Selection, new Listener() {
-        @Override
-        public void handleEvent(Event event) {
-          onScrolled(scrollTree);
-        }
-      });
-    }
-
-    /*
-     * When the entire feed fits in the viewport (no scrollbar visible),
-     * mouse wheel scrolling and arrow-key navigation still count as "reading"
-     * the visible items. Mark everything as read on any such gesture so
-     * single-page feeds are treated the same as multi-page feeds that have
-     * been scrolled through.
-     */
-    scrollTree.addListener(SWT.MouseWheel, new Listener() {
-      @Override
-      public void handleEvent(Event event) {
-        onNavigateNoScrollbar(scrollTree);
-      }
-    });
-
-    scrollTree.addListener(SWT.KeyDown, new Listener() {
-      @Override
-      public void handleEvent(Event event) {
-        switch (event.keyCode) {
-          case SWT.ARROW_UP:
-          case SWT.ARROW_DOWN:
-          case SWT.PAGE_UP:
-          case SWT.PAGE_DOWN:
-          case SWT.HOME:
-          case SWT.END:
-            onNavigateNoScrollbar(scrollTree);
-            break;
-          default:
-            break;
-        }
-      }
-    });
   }
 
   private void onMouseDoubleClick(DoubleClickEvent event) {
@@ -1258,109 +1220,6 @@ public class NewsTableControl implements IFeedViewPart {
     fViewer.removeSelectionChangedListener(fSelectionChangeListener);
     OwlDAO.removeEntityListener(ILabel.class, fLabelListener);
     PlatformUI.getWorkbench().getThemeManager().removePropertyChangeListener(fPropertyChangeListener);
-  }
-
-  /**
-   * Called when the user scrolls with the mouse wheel or navigates with arrow
-   * keys. If the vertical scrollbar is not visible (the entire feed fits in
-   * the viewport), all news items are marked as read immediately  they are
-   * all visible and the user has actively engaged with the list.
-   */
-  private void onNavigateNoScrollbar(Tree tree) {
-    if (tree.isDisposed())
-      return;
-
-    final boolean markRead = fInputPreferences.getBoolean(DefaultPreferences.MARK_READ_STATE);
-    if (!markRead)
-      return;
-
-    ScrollBar vBar = tree.getVerticalBar();
-    if (vBar != null && vBar.isVisible())
-      return;   /* Scrollbar is visible  let the normal scroll handler deal with it */
-
-    markAllVisibleAsRead(tree);
-  }
-
-  /**
-   * Marks every unread news item currently in the tree as read. Used when the
-   * entire feed fits in the viewport so there is no scrollbar to track.
-   */
-  private void markAllVisibleAsRead(Tree tree) {
-    TreeItem[] roots = tree.getItems();
-    for (TreeItem root : roots) {
-      Object data = root.getData();
-      if (data instanceof INews) {
-        INews news = (INews) data;
-        if (news.getState() != INews.State.READ && news.isVisible())
-          setNewsState(news, INews.State.READ, false);
-      }
-
-      /* Grouped view  check children */
-      for (int i = 0; i < root.getItemCount(); i++) {
-        TreeItem child = root.getItem(i);
-        Object childData = child.getData();
-        if (childData instanceof INews) {
-          INews news = (INews) childData;
-          if (news.getState() != INews.State.READ && news.isVisible())
-            setNewsState(news, INews.State.READ, false);
-        }
-      }
-    }
-  }
-
-  /**
-   * Called when the vertical scroll bar fires a selection event. Marks any
-   * news items that have scrolled above the current top of the viewport as
-   * read, so items bypassed by dragging the scrollbar are treated as seen.
-   */
-  private void onScrolled(Tree tree) {
-    if (tree.isDisposed())
-      return;
-
-    /* Only act if mark-as-read is enabled in preferences */
-    final boolean markRead = fInputPreferences.getBoolean(DefaultPreferences.MARK_READ_STATE);
-    if (!markRead)
-      return;
-
-    TreeItem topItem = tree.getTopItem();
-    if (topItem == null)
-      return;
-
-    markItemsAboveViewport(tree, topItem);
-  }
-
-  /**
-   * Iterates tree items in display order and marks every unread news item
-   * that appears above {@code topVisible} as read. Handles both flat lists
-   * and grouped views where news items are children of group nodes.
-   */
-  private void markItemsAboveViewport(Tree tree, TreeItem topVisible) {
-    TreeItem[] roots = tree.getItems();
-    for (TreeItem root : roots) {
-      if (root == topVisible)
-        return;
-
-      Object data = root.getData();
-      if (data instanceof INews) {
-        INews news = (INews) data;
-        if (news.getState() != INews.State.READ && news.isVisible())
-          setNewsState(news, INews.State.READ, false);
-      }
-
-      /* Grouped view  check children of the group node */
-      for (int i = 0; i < root.getItemCount(); i++) {
-        TreeItem child = root.getItem(i);
-        if (child == topVisible)
-          return;
-
-        Object childData = child.getData();
-        if (childData instanceof INews) {
-          INews news = (INews) childData;
-          if (news.getState() != INews.State.READ && news.isVisible())
-            setNewsState(news, INews.State.READ, false);
-        }
-      }
-    }
   }
 
   private void setNewsState(final INews news, final INews.State state, boolean async) {

@@ -916,7 +916,7 @@ public class NewsContentProvider implements ITreeContentProvider {
                   /* Browser shows Newspaper Mode: Only refresh under certain circumstances */
                   else {
                     if (canDoBrowserRefresh(fWasEmpty))
-                      fFeedView.refreshBrowserViewer();
+                      fFeedView.refreshBrowserViewer(true); //Move to top: new news may have been prepended
                     else
                       fFeedView.getNewsBrowserControl().setInfoBarVisible(true);
                   }
@@ -972,7 +972,7 @@ public class NewsContentProvider implements ITreeContentProvider {
               if (!browserShowsCollection())
                 fFeedView.refreshTableViewer(true, false);
               else
-                fFeedView.refresh(true, false);
+                fFeedView.refresh(true, false, true); //Move to top: new news may have been prepended
             }
           }
         });
