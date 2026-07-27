@@ -75,6 +75,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * The <code>SearchConditionItem</code> is an item of the
@@ -142,7 +144,8 @@ public class SearchConditionItem extends Composite {
     NO_WARNING,
     PHRASE_AND_WILDCARD_SEARCH_COMBINED,
     PHRASE_SEARCH_UNSUPPORTED,
-    WILDCARD_AND_SPECIAL_CHAR_SEARCH
+    WILDCARD_AND_SPECIAL_CHAR_SEARCH,
+    INVALID_REGEX_PATTERN
   }
 
   /**
@@ -285,6 +288,8 @@ public class SearchConditionItem extends Composite {
       SearchSpecifier specifier = (SearchSpecifier) element;
       if (specifier == SearchSpecifier.CONTAINS)
         return Messages.SearchConditionItem_CONTAINS_ANY;
+      if (specifier == SearchSpecifier.MATCHES_REGEX || specifier == SearchSpecifier.MATCHES_REGEX_NOT)
+        return Messages.SearchConditionItem_MATCHES_REGEX_TOOLTIP;
     }
 
     return null;
@@ -574,7 +579,17 @@ public class SearchConditionItem extends Composite {
 
               /* Determine any Search Warning to show depending on field and text value */
               SearchWarning warning = SearchWarning.NO_WARNING;
-              if (field.getId() == INews.CATEGORIES || field.getId() == INews.SOURCE || field.getId() == INews.FEED || field.getId() == INews.LINK) {
+              SearchSpecifier currentSpecifier = fSpecifierViewer.getSelection().isEmpty() ? null
+                  : (SearchSpecifier) ((IStructuredSelection) fSpecifierViewer.getSelection()).getFirstElement();
+              if (currentSpecifier == SearchSpecifier.MATCHES_REGEX || currentSpecifier == SearchSpecifier.MATCHES_REGEX_NOT) {
+                if (!textValue.isEmpty()) {
+                  try {
+                    Pattern.compile(textValue);
+                  } catch (PatternSyntaxException e) {
+                    warning = SearchWarning.INVALID_REGEX_PATTERN;
+                  }
+                }
+              } else if (field.getId() == INews.CATEGORIES || field.getId() == INews.SOURCE || field.getId() == INews.FEED || field.getId() == INews.LINK) {
                 if (StringUtils.isPhraseSearch(textValue))
                   warning = SearchWarning.PHRASE_SEARCH_UNSUPPORTED;
               } else {
@@ -658,17 +673,25 @@ public class SearchConditionItem extends Composite {
 
   private void updateFieldDecoration(Text text, ControlDecoration deco, SearchWarning warning, ISearchField field) {
 
-    /* Show Warning in Control Decoration about wrong search pattern use */
+    /* Show Warning/Error in Control Decoration about wrong search pattern use */
     if (warning != SearchWarning.NO_WARNING) {
       String decoText;
-      if (warning == SearchWarning.PHRASE_SEARCH_UNSUPPORTED)
+      String decorationId;
+      if (warning == SearchWarning.PHRASE_SEARCH_UNSUPPORTED) {
         decoText = Messages.SearchConditionItem_WARNING_PHRASE_SEARCH_UNSUPPORTED;
-      else if (warning == SearchWarning.PHRASE_AND_WILDCARD_SEARCH_COMBINED)
+        decorationId = FieldDecorationRegistry.DEC_WARNING;
+      } else if (warning == SearchWarning.PHRASE_AND_WILDCARD_SEARCH_COMBINED) {
         decoText = Messages.SearchConditionItem_ERROR_PHRASE_AND_WILDCARD_SEARCH;
-      else
+        decorationId = FieldDecorationRegistry.DEC_WARNING;
+      } else if (warning == SearchWarning.INVALID_REGEX_PATTERN) {
+        decoText = Messages.SearchConditionItem_ERROR_INVALID_REGEX;
+        decorationId = FieldDecorationRegistry.DEC_ERROR;
+      } else {
         decoText = Messages.SearchConditionItem_WARNING_WILDCARD_SPECIAL_CHAR_SEARCH;
+        decorationId = FieldDecorationRegistry.DEC_WARNING;
+      }
 
-      deco.setImage(FieldDecorationRegistry.getDefault().getFieldDecoration(FieldDecorationRegistry.DEC_WARNING).getImage());
+      deco.setImage(FieldDecorationRegistry.getDefault().getFieldDecoration(decorationId).getImage());
       deco.setDescriptionText(decoText);
       if (text.isFocusControl()) //Otherwise hover shows offscreen from some dialogs
         deco.showHoverText(decoText);
@@ -754,11 +777,13 @@ public class SearchConditionItem extends Composite {
           specifiers.add(SearchSpecifier.IS_NOT);
       }
 
-      /* Contains / Contains Not */
+      /* Contains / Contains Not / Matches Regex */
       else {
         specifiers.add(SearchSpecifier.CONTAINS_ALL);
         specifiers.add(SearchSpecifier.CONTAINS);
         specifiers.add(SearchSpecifier.CONTAINS_NOT);
+        specifiers.add(SearchSpecifier.MATCHES_REGEX);
+        specifiers.add(SearchSpecifier.MATCHES_REGEX_NOT);
       }
 
       /* Begins With / Ends With */

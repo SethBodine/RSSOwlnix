@@ -4,6 +4,110 @@
 
 ### Bug Fixes
 
+- **Search Filters threw an exception when using a "matches regex" condition**
+  The regex-matching search condition ("matches regex" / "doesn't match
+  regex", added for Entire News/Title/Description/Author/Attachments) was
+  only wired up in the interactive "Search News" engine (`ModelSearchImpl`).
+  Search Filters (Tools  News Filters, the rules that run automatically
+  against incoming news) use a separate query builder
+  (`ModelSearchQueries.createQuery()`, called directly from
+  `ApplicationServiceImpl`) that has no concept of regex conditions and
+  explicitly throws `UnsupportedOperationException` for any specifier it
+  doesn't recognize. Since filter conditions are built with the same UI
+  widgets as "Search News", nothing stopped a user from creating a filter
+  with a regex condition that would then throw the next time news arrived.
+  Fixed by extracting the regex-condition handling into a shared
+  `RegexSearchUtils` and using it from both engines, so Search Filters now
+  apply regex conditions as a Java post-filter the same way "Search News"
+  does.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/RegexSearchUtils.java` (new)
+  `org.rssowl.core/src/org/rssowl/core/internal/ApplicationServiceImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java`
+
+- **"Attachments matches regex" silently searched the news title instead**
+  The field-text lookup used for the regex post-filter returned
+  `news.getTitle()` for the Attachments field instead of the attachment
+  link/type text that's actually indexed for it (see
+  `SearchDocument#createAttachmentsField`), so a regex condition on
+  Attachments never tested attachment data at all. Fixed as part of the
+  `RegexSearchUtils` extraction above; "Entire News" regex matching now also
+  includes attachment text, matching how the non-regex "Entire News" search
+  already behaves.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/RegexSearchUtils.java`
+
+- **Mixing regex and non-regex conditions under "match any" gave silently wrong results**
+  A regex condition is evaluated as a Java post-filter after the Lucene
+  query for the other conditions has already run. Under "match all" that
+  combines correctly (both layers narrow the result set further). Under
+  "match any" it doesn't: an item that already matched a non-regex OR
+  condition could be incorrectly dropped for not also matching the regex,
+  and an item that could only ever match through the regex condition was
+  never a Lucene candidate to begin with. Rather than trying to make "match
+  any" work correctly for a mix of the two (which would need the regex
+  filter to know which Lucene conditions each candidate already satisfied),
+  this combination is now simplified to a single rule: regex conditions are
+  only applied when they are the sole kind of condition in the search (a
+  Location/Scope condition is exempt, since it just restricts which
+  Bookmark/Folder/Bin is searched). If "match any" is selected and regex
+  conditions are mixed with other conditions, the regex conditions are
+  ignored (with a log entry explaining why) and the search runs on the
+  other conditions only, exactly as if the regex conditions were never
+  added.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/RegexSearchUtils.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/ApplicationServiceImpl.java`
+
+  The specifier dropdown's existing tooltip (shown for "matches regex" /
+  "doesn't match regex") now also explains this restriction, so it's visible
+  while building the search rather than only discoverable via the log.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/search/messages.properties`
+
+- **List/Classic layout incorrectly marked items read on scroll**
+  A previous fix ("Items not marked as read when scrolling past them using
+  the scrollbar", below) added scroll/wheel/key-driven mark-as-read logic to
+  `NewsTableControl`, the table control shared by both the List and Classic
+  layouts. That logic fired on any scrollbar movement, mouse wheel, or arrow
+  key press, regardless of whether the user had actually selected/read an
+  item  so simply scrolling the list marked everything above the fold as
+  read. Only Newspaper/Headlines (the browser-rendered view) is meant to
+  mark items read on scrolling; List/Classic should only mark read via
+  selection (click or arrow-key selection change) after the configured
+  delay. Removed the scroll/wheel/key listeners and their associated
+  `onScrolled`/`markItemsAboveViewport`/`onNavigateNoScrollbar`/
+  `markAllVisibleAsRead` methods from `NewsTableControl`.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java`
+
+- **Refreshing a feed with new items marked the new items as read**
+  When new items arrived and the info bar's "refresh" link was clicked (or a
+  background refresh occurred while the newspaper view was hidden/minimized),
+  the browser view reloaded but kept the scroll bar at its pre-refresh
+  position. Since new items are prepended above the previously-read content,
+  that old absolute scroll offset no longer corresponded to the same items 
+  the next scroll-based mark-read evaluation would then treat everything
+  above the (now misaligned) offset, including the brand-new items, as
+  already read. Fixed by resetting the scroll position to the top instead of
+  trying to preserve it, both for the info bar's "refresh" action and for
+  the browser-viewer refresh path used when new news arrives.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserControl.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FeedView.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsContentProvider.java`
+
+- **Fast scrollbar-drag in Newspaper mode didn't mark items read in bulk**
+  Mark-read-on-scroll in Newspaper mode was driven entirely by SWT-level
+  `MouseWheel`/`MouseDown`/`KeyDown` events on the embedded browser control.
+  Dragging the native scrollbar thumb directly doesn't generate those
+  events  the gesture is handled inside the embedded browser engine's own
+  scrollbar chrome and never reaches the host SWT widget  so scrolling
+  through hundreds of items this way silently skipped mark-as-read entirely.
+  Fixed by additionally binding a real DOM `scroll` listener inside the
+  rendered page (re-injected after every page load, since a reload replaces
+  the document), debounced client-side so a fast drag only triggers one
+  evaluation once the scrollbar actually stops moving. On settle it calls
+  back into the same debounced mark-read evaluation already used for
+  mouse/keyboard interaction.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java`
+
 - **Single-item newspaper view never marked as read without scrollbar**
   In newspaper layout, if a feed contained only one item and the page had no
   scrollbar, the item was never automatically marked as read regardless of how

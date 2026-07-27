@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?pde version="3.5"?>
 
-<product name="RSSOwlnix Product" uid="org.rssowl.ui.product" id="org.rssowl.ui.product" application="org.rssowl.ui.rssowl" version="2.10.2" type="features" includeLaunchers="true" autoIncludeRequirements="true">
+<product name="RSSOwlnix Product" uid="org.rssowl.ui.product" id="org.rssowl.ui.product" application="org.rssowl.ui.rssowl" version="2.10.3" type="features" includeLaunchers="true" autoIncludeRequirements="true">
 
    <aboutInfo>
       <image path="/org.rssowl.ui/icons/product/about.gif"/>
       <text>
          RSSOwlnix fork of RSSOwl
 
-Version: 2.10.2-beta
-Build Id: 2026-05-10
+Version: 2.10.3-beta
+Build Id: 2026-07-28
 
 RSSOwlnix and RSSOwl is licensed under the terms of the Eclipse Public License version 1.0.
 http://www.rssowl.org/legal/epl-v10.html

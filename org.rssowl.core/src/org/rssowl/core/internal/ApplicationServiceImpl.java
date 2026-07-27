@@ -29,6 +29,7 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.search.HitCollector;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.store.NoLockFactory;
 import org.apache.lucene.store.RAMDirectory;
@@ -52,6 +53,7 @@ import org.rssowl.core.internal.persist.search.Indexer;
 import org.rssowl.core.internal.persist.search.ModelSearchImpl;
 import org.rssowl.core.internal.persist.search.ModelSearchQueries;
 import org.rssowl.core.internal.persist.search.NewsDocument;
+import org.rssowl.core.internal.persist.search.RegexSearchUtils;
 import org.rssowl.core.internal.persist.search.SearchDocument;
 import org.rssowl.core.internal.persist.service.DB4OIDGenerator;
 import org.rssowl.core.internal.persist.service.DBHelper;
@@ -529,8 +531,30 @@ public class ApplicationServiceImpl implements IApplicationService {
         try {
           final List<INews> matchingNews = new ArrayList<>();
 
+          /*
+           * Separate regex conditions (post-filtered in Java below, see
+           * RegexSearchUtils) from Lucene conditions. Lucene queries can only
+           * be built from indexed/analyzed terms, not from a raw
+           * java.util.regex.Pattern, so regex conditions must never be
+           * passed into ModelSearchQueries - doing so throws
+           * UnsupportedOperationException.
+           */
+          ISearch search = filter.getSearch();
+          List<ISearchCondition> regexConditions = new ArrayList<>();
+          List<ISearchCondition> luceneConditions = new ArrayList<>();
+          RegexSearchUtils.splitConditions(search.getSearchConditions(), regexConditions, luceneConditions);
+
+          /* Regex conditions only combine correctly with other conditions under "match all"; ignore them otherwise (see ModelSearchImpl#doSearchNews for why) */
+          if (!search.matchAllConditions() && RegexSearchUtils.hasMixedConditionTypes(regexConditions, luceneConditions)) {
+            Activator.getDefault().logError("Ignoring regex condition(s) in filter '" + filter.getName() + "': regex conditions cannot be combined with other conditions when \"match any\" is selected.", null); //$NON-NLS-1$ //$NON-NLS-2$
+            regexConditions = Collections.emptyList();
+          }
+
           /* Perform Query */
-          Query query = ModelSearchQueries.createQuery(filter.getSearch());
+          Query query = (luceneConditions.isEmpty() && !regexConditions.isEmpty())
+              ? new MatchAllDocsQuery()
+              : ModelSearchQueries.createQuery(luceneConditions, null, search.matchAllConditions());
+
           searcher[0].search(query, new HitCollector() {
             @Override
             public void collect(int doc, float score) {
@@ -545,6 +569,21 @@ public class ApplicationServiceImpl implements IApplicationService {
               }
             }
           });
+
+          /* Apply regex post-filter, if any */
+          if (!regexConditions.isEmpty()) {
+            List<RegexSearchUtils.CompiledRegexCondition> compiled = RegexSearchUtils.compile(regexConditions);
+            if (!compiled.isEmpty()) {
+              boolean matchAllConditions = search.matchAllConditions();
+              List<INews> regexFiltered = new ArrayList<>(matchingNews.size());
+              for (INews candidate : matchingNews) {
+                if (RegexSearchUtils.matches(candidate, compiled, matchAllConditions))
+                  regexFiltered.add(candidate);
+              }
+              matchingNews.clear();
+              matchingNews.addAll(regexFiltered);
+            }
+          }
 
           /* Apply Filter */
           matchingNews.removeAll(filteredNews);

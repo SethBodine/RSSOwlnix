@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -438,9 +439,33 @@ public class ModelSearchImpl implements IModelSearch {
 
   private List<SearchHit<NewsReference>> doSearchNews(Collection<ISearchCondition> conditions, ISearchCondition scope, boolean matchAllConditions) throws PersistenceException {
 
+    /* Separate regex conditions (post-filtered in Java) from Lucene conditions */
+    List<ISearchCondition> regexConditions = new ArrayList<>();
+    List<ISearchCondition> luceneConditions = new ArrayList<>();
+    RegexSearchUtils.splitConditions(conditions, regexConditions, luceneConditions);
+
+    /*
+     * Regex conditions can only be combined correctly with other conditions
+     * under "match all" semantics (see RegexSearchUtils#hasMixedConditionTypes
+     * for why "match any" cannot be supported). Rather than silently return
+     * incomplete or wrong results for that unsupported combination, ignore
+     * the regex conditions entirely and search using only the other
+     * conditions, exactly as if the regex conditions were never added.
+     */
+    if (!matchAllConditions && RegexSearchUtils.hasMixedConditionTypes(regexConditions, luceneConditions)) {
+      Activator.safeLogError("Ignoring regex search condition(s): regex conditions cannot be combined with other conditions when \"match any\" is selected. Use only regex conditions, or switch to \"match all\".", null); //$NON-NLS-1$
+      regexConditions = Collections.emptyList();
+    }
+
     /* Perform the search */
     try {
-      Query bQuery = ModelSearchQueries.createQuery(conditions, scope, matchAllConditions);
+      /*
+       * When only regex conditions are present with no scope, use MatchAllDocsQuery so
+       * all indexed news are candidates for the Java-side regex post-filter.
+       */
+      Query bQuery = (luceneConditions.isEmpty() && !regexConditions.isEmpty() && scope == null)
+          ? new MatchAllDocsQuery()
+          : ModelSearchQueries.createQuery(luceneConditions, scope, matchAllConditions);
 
       /* Make sure the searcher is in sync */
       final IndexSearcher currentSearcher = getCurrentSearcher();
@@ -481,6 +506,8 @@ public class ModelSearchImpl implements IModelSearch {
       /* Perform the Search */
       try {
         currentSearcher.search(bQuery, collector);
+        if (!regexConditions.isEmpty())
+          return applyRegexFilter(resultList, regexConditions, matchAllConditions);
         return resultList;
       } finally {
         disposeIfNecessary(currentSearcher);
@@ -488,6 +515,29 @@ public class ModelSearchImpl implements IModelSearch {
     } catch (IOException e) {
       throw new PersistenceException(Messages.ModelSearchImpl_ERROR_SEARCH, e);
     }
+  }
+
+  private List<SearchHit<NewsReference>> applyRegexFilter(List<SearchHit<NewsReference>> hits, List<ISearchCondition> regexConditions, boolean matchAllConditions) {
+
+    List<RegexSearchUtils.CompiledRegexCondition> compiled = RegexSearchUtils.compile(regexConditions);
+    if (compiled.isEmpty())
+      return hits;
+
+    List<SearchHit<NewsReference>> filtered = new ArrayList<>();
+    for (SearchHit<NewsReference> hit : hits) {
+      try {
+        INews news = hit.getResult().resolve();
+        if (news == null)
+          continue;
+
+        if (RegexSearchUtils.matches(news, compiled, matchAllConditions))
+          filtered.add(hit);
+      } catch (PersistenceException e) {
+        Activator.safeLogError(e.getMessage(), e);
+      }
+    }
+
+    return filtered;
   }
 
   private IndexSearcher createIndexSearcher() throws CorruptIndexException, IOException {
