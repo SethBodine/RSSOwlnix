@@ -53,12 +53,9 @@ import org.rssowl.core.internal.Activator;
 import org.rssowl.core.internal.InternalOwl;
 import org.rssowl.core.internal.persist.service.DBManager;
 import org.rssowl.core.persist.IGuid;
-import org.rssowl.core.persist.IEntity;
 import org.rssowl.core.persist.INews;
-import org.rssowl.core.persist.IPerson;
 import org.rssowl.core.persist.ISearch;
 import org.rssowl.core.persist.ISearchCondition;
-import org.rssowl.core.persist.SearchSpecifier;
 import org.rssowl.core.persist.dao.INewsDAO;
 import org.rssowl.core.persist.reference.NewsReference;
 import org.rssowl.core.persist.service.IModelSearch;
@@ -72,6 +69,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -81,8 +79,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 /**
  * The central interface for searching types from the persistence layer. The
@@ -446,13 +442,19 @@ public class ModelSearchImpl implements IModelSearch {
     /* Separate regex conditions (post-filtered in Java) from Lucene conditions */
     List<ISearchCondition> regexConditions = new ArrayList<>();
     List<ISearchCondition> luceneConditions = new ArrayList<>();
-    for (ISearchCondition cond : conditions) {
-      SearchSpecifier spec = cond.getSpecifier();
-      if (spec == SearchSpecifier.MATCHES_REGEX || spec == SearchSpecifier.MATCHES_REGEX_NOT) {
-        regexConditions.add(cond);
-      } else {
-        luceneConditions.add(cond);
-      }
+    RegexSearchUtils.splitConditions(conditions, regexConditions, luceneConditions);
+
+    /*
+     * Regex conditions can only be combined correctly with other conditions
+     * under "match all" semantics (see RegexSearchUtils#hasMixedConditionTypes
+     * for why "match any" cannot be supported). Rather than silently return
+     * incomplete or wrong results for that unsupported combination, ignore
+     * the regex conditions entirely and search using only the other
+     * conditions, exactly as if the regex conditions were never added.
+     */
+    if (!matchAllConditions && RegexSearchUtils.hasMixedConditionTypes(regexConditions, luceneConditions)) {
+      Activator.safeLogError("Ignoring regex search condition(s): regex conditions cannot be combined with other conditions when \"match any\" is selected. Use only regex conditions, or switch to \"match all\".", null); //$NON-NLS-1$
+      regexConditions = Collections.emptyList();
     }
 
     /* Perform the search */
@@ -517,22 +519,8 @@ public class ModelSearchImpl implements IModelSearch {
 
   private List<SearchHit<NewsReference>> applyRegexFilter(List<SearchHit<NewsReference>> hits, List<ISearchCondition> regexConditions, boolean matchAllConditions) {
 
-    /* Pre-compile patterns and collect field IDs; skip any malformed patterns */
-    List<Pattern> patterns = new ArrayList<>(regexConditions.size());
-    List<Boolean> negations = new ArrayList<>(regexConditions.size());
-    List<Integer> fieldIds = new ArrayList<>(regexConditions.size());
-    for (ISearchCondition cond : regexConditions) {
-      String value = String.valueOf(cond.getValue());
-      try {
-        patterns.add(Pattern.compile(value, Pattern.CASE_INSENSITIVE | Pattern.DOTALL));
-        negations.add(cond.getSpecifier() == SearchSpecifier.MATCHES_REGEX_NOT);
-        fieldIds.add(cond.getField().getId());
-      } catch (PatternSyntaxException e) {
-        Activator.safeLogError("Skipping invalid regex in search condition: " + value, e); //$NON-NLS-1$
-      }
-    }
-
-    if (patterns.isEmpty())
+    List<RegexSearchUtils.CompiledRegexCondition> compiled = RegexSearchUtils.compile(regexConditions);
+    if (compiled.isEmpty())
       return hits;
 
     List<SearchHit<NewsReference>> filtered = new ArrayList<>();
@@ -542,27 +530,7 @@ public class ModelSearchImpl implements IModelSearch {
         if (news == null)
           continue;
 
-        boolean overallMatch = matchAllConditions;
-        for (int i = 0; i < patterns.size(); i++) {
-          String fieldText = getFieldTextForRegex(news, fieldIds.get(i));
-          boolean matches = patterns.get(i).matcher(fieldText != null ? fieldText : "").find(); //$NON-NLS-1$
-          if (negations.get(i))
-            matches = !matches;
-
-          if (matchAllConditions) {
-            if (!matches) {
-              overallMatch = false;
-              break;
-            }
-          } else {
-            if (matches) {
-              overallMatch = true;
-              break;
-            }
-          }
-        }
-
-        if (overallMatch)
+        if (RegexSearchUtils.matches(news, compiled, matchAllConditions))
           filtered.add(hit);
       } catch (PersistenceException e) {
         Activator.safeLogError(e.getMessage(), e);
@@ -570,36 +538,6 @@ public class ModelSearchImpl implements IModelSearch {
     }
 
     return filtered;
-  }
-
-  private String getFieldTextForRegex(INews news, int fieldId) {
-    switch (fieldId) {
-      case IEntity.ALL_FIELDS: {
-        StringBuilder sb = new StringBuilder();
-        if (news.getTitle() != null)
-          sb.append(news.getTitle()).append(' ');
-        if (news.getDescription() != null)
-          sb.append(news.getDescription()).append(' ');
-        IPerson author = news.getAuthor();
-        if (author != null && author.getName() != null)
-          sb.append(author.getName());
-        return sb.toString();
-      }
-      case INews.TITLE:
-        return news.getTitle();
-      case INews.DESCRIPTION:
-        return news.getDescription();
-      case INews.AUTHOR: {
-        IPerson author = news.getAuthor();
-        return author != null ? author.getName() : null;
-      }
-      case INews.LINK:
-        return news.getLinkAsText();
-      case INews.ATTACHMENTS_CONTENT:
-        return news.getTitle();
-      default:
-        return null;
-    }
   }
 
   private IndexSearcher createIndexSearcher() throws CorruptIndexException, IOException {

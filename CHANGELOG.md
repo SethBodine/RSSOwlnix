@@ -4,6 +4,64 @@
 
 ### Bug Fixes
 
+- **Search Filters threw an exception when using a "matches regex" condition**
+  The regex-matching search condition ("matches regex" / "doesn't match
+  regex", added for Entire News/Title/Description/Author/Attachments) was
+  only wired up in the interactive "Search News" engine (`ModelSearchImpl`).
+  Search Filters (Tools  News Filters, the rules that run automatically
+  against incoming news) use a separate query builder
+  (`ModelSearchQueries.createQuery()`, called directly from
+  `ApplicationServiceImpl`) that has no concept of regex conditions and
+  explicitly throws `UnsupportedOperationException` for any specifier it
+  doesn't recognize. Since filter conditions are built with the same UI
+  widgets as "Search News", nothing stopped a user from creating a filter
+  with a regex condition that would then throw the next time news arrived.
+  Fixed by extracting the regex-condition handling into a shared
+  `RegexSearchUtils` and using it from both engines, so Search Filters now
+  apply regex conditions as a Java post-filter the same way "Search News"
+  does.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/RegexSearchUtils.java` (new)
+  `org.rssowl.core/src/org/rssowl/core/internal/ApplicationServiceImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java`
+
+- **"Attachments matches regex" silently searched the news title instead**
+  The field-text lookup used for the regex post-filter returned
+  `news.getTitle()` for the Attachments field instead of the attachment
+  link/type text that's actually indexed for it (see
+  `SearchDocument#createAttachmentsField`), so a regex condition on
+  Attachments never tested attachment data at all. Fixed as part of the
+  `RegexSearchUtils` extraction above; "Entire News" regex matching now also
+  includes attachment text, matching how the non-regex "Entire News" search
+  already behaves.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/RegexSearchUtils.java`
+
+- **Mixing regex and non-regex conditions under "match any" gave silently wrong results**
+  A regex condition is evaluated as a Java post-filter after the Lucene
+  query for the other conditions has already run. Under "match all" that
+  combines correctly (both layers narrow the result set further). Under
+  "match any" it doesn't: an item that already matched a non-regex OR
+  condition could be incorrectly dropped for not also matching the regex,
+  and an item that could only ever match through the regex condition was
+  never a Lucene candidate to begin with. Rather than trying to make "match
+  any" work correctly for a mix of the two (which would need the regex
+  filter to know which Lucene conditions each candidate already satisfied),
+  this combination is now simplified to a single rule: regex conditions are
+  only applied when they are the sole kind of condition in the search (a
+  Location/Scope condition is exempt, since it just restricts which
+  Bookmark/Folder/Bin is searched). If "match any" is selected and regex
+  conditions are mixed with other conditions, the regex conditions are
+  ignored (with a log entry explaining why) and the search runs on the
+  other conditions only, exactly as if the regex conditions were never
+  added.
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/RegexSearchUtils.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/ApplicationServiceImpl.java`
+
+  The specifier dropdown's existing tooltip (shown for "matches regex" /
+  "doesn't match regex") now also explains this restriction, so it's visible
+  while building the search rather than only discoverable via the log.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/search/messages.properties`
+
 - **List/Classic layout incorrectly marked items read on scroll**
   A previous fix ("Items not marked as read when scrolling past them using
   the scrollbar", below) added scroll/wheel/key-driven mark-as-read logic to
