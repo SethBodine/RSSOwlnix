@@ -2015,8 +2015,24 @@ public class FeedView extends EditorPart implements IReusableEditor {
    * @param updateLabels If <code>TRUE</code> update all Labels.
    */
   void refresh(boolean delayRedraw, boolean updateLabels) {
+    refresh(delayRedraw, updateLabels, false);
+  }
+
+  /**
+   * Refreshes all parts of this editor.
+   *
+   * @param delayRedraw If <code>TRUE</code> delay redraw until operation is
+   * done.
+   * @param updateLabels If <code>TRUE</code> update all Labels.
+   * @param moveBrowserToTop If <code>TRUE</code> resets the browser viewer's
+   * scroll position to the top as part of the refresh. Used when new news
+   * arrived so that (a) the new items are visible immediately and (b) no
+   * stale scroll position is left around for the mark-read-on-scroll logic
+   * to misinterpret against the newly laid-out content.
+   */
+  void refresh(boolean delayRedraw, boolean updateLabels, boolean moveBrowserToTop) {
     refreshTableViewer(delayRedraw, updateLabels);
-    refreshBrowserViewer();
+    refreshBrowserViewer(moveBrowserToTop);
   }
 
   /**
@@ -2191,6 +2207,16 @@ public class FeedView extends EditorPart implements IReusableEditor {
 
   /* Refresh Browser-Viewer */
   void refreshBrowserViewer() {
+    refreshBrowserViewer(false);
+  }
+
+  /**
+   * Refreshes the Browser-Viewer.
+   *
+   * @param moveToTop If <code>TRUE</code> resets the scroll position to the
+   * top after refreshing (see {@link #refresh(boolean, boolean, boolean)}).
+   */
+  void refreshBrowserViewer(boolean moveToTop) {
 
     /* Return on Shutdown */
     if (Controller.getDefault().isShuttingDown())
@@ -2198,7 +2224,7 @@ public class FeedView extends EditorPart implements IReusableEditor {
 
     /* Refresh if browser is visible */
     if (isBrowserViewerVisible())
-      fNewsBrowserControl.getViewer().refresh();
+      fNewsBrowserControl.getViewer().refresh(false, moveToTop);
   }
 
   /**

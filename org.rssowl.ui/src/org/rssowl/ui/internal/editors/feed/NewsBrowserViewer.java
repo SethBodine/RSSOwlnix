@@ -52,6 +52,8 @@ import org.eclipse.jface.window.SameShellProvider;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
+import org.eclipse.swt.browser.ProgressEvent;
+import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
@@ -169,6 +171,7 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
   static final String RELATED_NEWS_MENU_HANDLER_ID = "org.rssowl.ui.RelatedNewsMenu"; //$NON-NLS-1$
   static final String NEXT_PAGE_HANDLER_ID = "org.rssowl.ui.NextPage"; //$NON-NLS-1$
   static final String SCROLL_NEXT_PAGE_HANDLER_ID = "org.rssowl.ui.ScrollNextPage"; //$NON-NLS-1$
+  static final String SCROLL_SETTLED_HANDLER_ID = "org.rssowl.ui.ScrollSettled"; //$NON-NLS-1$
 
   /* Delay in millies before reacting on user interaction */
   private static final int USER_INTERACTION_DELAY = 500;
@@ -393,6 +396,7 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
     fBrowser.addLinkHandler(RELATED_NEWS_MENU_HANDLER_ID, this);
     fBrowser.addLinkHandler(NEXT_PAGE_HANDLER_ID, this);
     fBrowser.addLinkHandler(SCROLL_NEXT_PAGE_HANDLER_ID, this);
+    fBrowser.addLinkHandler(SCROLL_SETTLED_HANDLER_ID, this);
 
     /* React on User Interaction (Mouse Scrolling, Mouse Down, Key Pressed) */
     Listener listener = new Listener() {
@@ -404,6 +408,50 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
     fBrowser.getControl().addListener(SWT.MouseWheel, listener);
     fBrowser.getControl().addListener(SWT.MouseDown, listener);
     fBrowser.getControl().addListener(SWT.KeyDown, listener);
+
+    /*
+     * The above SWT-level listeners never fire for a native scrollbar-thumb
+     * drag: that gesture is consumed entirely inside the embedded native
+     * browser's own scrollbar chrome and is not delivered to the host SWT
+     * widget as a MouseDown/MouseWheel event. To catch that gesture (and any
+     * other scrolling we might otherwise miss) we instead bind a real DOM
+     * 'scroll' listener inside the page itself, which fires for every
+     * scroll mechanism (wheel, keys, or scrollbar drag) no matter how the
+     * scroll position changed. It is debounced client-side so that a fast
+     * drag through hundreds of items only triggers one evaluation, once the
+     * scrollbar actually stops moving  matching the same debounce behaviour
+     * already used for mouse/keyboard interaction.
+     *
+     * Because a full page (re)load replaces the entire document, any
+     * previously bound DOM listener is gone with it, so we re-inject this
+     * once per completed top-level navigation.
+     */
+    ((Browser) fBrowser.getControl()).addProgressListener(new ProgressListener() {
+      @Override
+      public void changed(ProgressEvent event) {
+        // not needed
+      }
+
+      @Override
+      public void completed(ProgressEvent event) {
+        if (fBrowser.getControl().isDisposed())
+          return;
+
+        StringBuilder js = new StringBuilder();
+        js.append("if (!window.__owlScrollSettleBound) {"); //$NON-NLS-1$
+        js.append("  window.__owlScrollSettleBound = true;"); //$NON-NLS-1$
+        js.append("  var owlScrollSettleTimer = null;"); //$NON-NLS-1$
+        js.append("  window.addEventListener('scroll', function() {"); //$NON-NLS-1$
+        js.append("    if (owlScrollSettleTimer) clearTimeout(owlScrollSettleTimer);"); //$NON-NLS-1$
+        js.append("    owlScrollSettleTimer = setTimeout(function() {"); //$NON-NLS-1$
+        js.append("      window.location.href = '").append(ILinkHandler.HANDLER_PROTOCOL + SCROLL_SETTLED_HANDLER_ID).append("';"); //$NON-NLS-1$ //$NON-NLS-2$
+        js.append("    }, 300);"); //$NON-NLS-1$
+        js.append("  }, true);"); //$NON-NLS-1$
+        js.append("}"); //$NON-NLS-1$
+
+        fBrowser.execute(js.toString(), "ScrollSettleBinding"); //$NON-NLS-1$
+      }
+    });
   }
 
   private void onUserInteraction() {
@@ -1024,6 +1072,11 @@ public class NewsBrowserViewer extends ContentViewer implements ILinkHandler {
     /* Reveal Next Page */
     else if (NEXT_PAGE_HANDLER_ID.equals(id)) {
       revealNextPage(true);
+    }
+
+    /* Native scrollbar-drag (or any other) scrolling has settled */
+    else if (SCROLL_SETTLED_HANDLER_ID.equals(id)) {
+      onUserInteraction();
     }
 
     /* Scroll Reveal Next Page */

@@ -40,6 +40,8 @@ public class Messages extends NLS {
   public static String SearchSpecifier_IS_LESS_THAN;
   public static String SearchSpecifier_IS_SIMILAR_TO;
   public static String SearchSpecifier_ISNT;
+  public static String SearchSpecifier_MATCHES_REGEX;
+  public static String SearchSpecifier_MATCHES_REGEX_NOT;
 
   private Messages() {}
 

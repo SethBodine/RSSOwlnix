@@ -221,10 +221,20 @@ public class NewsBrowserControl implements IFeedViewPart {
 
   private void onInfoBarClicked() {
     /*
-     * Capture the current scroll position before reloading so the view does
-     * not jump to the top. We read scrollTop synchronously via execute(), then
-     * register a one-shot ProgressListener that restores it after the new page
-     * has finished loading.
+     * Reset the scroll position to the top when reloading to show the newly
+     * arrived items.
+     *
+     * IMPORTANT (order of operations): we deliberately do NOT try to restore
+     * the scroll offset the user was previously at. New items are prepended
+     * above the previously-read content, so any pre-refresh absolute scrollY
+     * no longer lines up with the same items after the reload  restoring it
+     * would land the viewport past the newly inserted items, and the very
+     * next scroll/mouse/key interaction would then evaluate that position
+     * via the mark-read-on-scroll logic and incorrectly mark all of the new
+     * items (and anything else above that stale offset) as read before the
+     * user ever saw them. Scrolling to the top instead guarantees nothing is
+     * above the visible viewport yet, so nothing can be marked read as a
+     * side-effect of the refresh itself.
      *
      * home() calls internalSetInput(force=true) which unconditionally calls
      * setUrl(), causing the ApplicationServer to rebuild the page from the
@@ -236,28 +246,20 @@ public class NewsBrowserControl implements IFeedViewPart {
 
     final Browser browser = (Browser) fViewer.getControl();
 
-    /* Read current scroll position synchronously */
-    final long[] scrollY = { 0 };
-    Object result = browser.evaluate("return document.body.scrollTop || document.documentElement.scrollTop;"); //$NON-NLS-1$
-    if (result instanceof Number)
-      scrollY[0] = ((Number) result).longValue();
+    /* Register one-shot listener to scroll to the top once the new page has finished loading */
+    browser.addProgressListener(new ProgressListener() {
+      @Override
+      public void changed(ProgressEvent event) {
+        // not needed
+      }
 
-    /* Register one-shot listener to restore scroll after reload completes */
-    if (scrollY[0] > 0) {
-      browser.addProgressListener(new ProgressListener() {
-        @Override
-        public void changed(ProgressEvent event) {
-          // not needed
-        }
-
-        @Override
-        public void completed(ProgressEvent event) {
-          browser.removeProgressListener(this);
-          if (!browser.isDisposed())
-            browser.execute("document.body.scrollTop=" + scrollY[0] + "; document.documentElement.scrollTop=" + scrollY[0] + ";"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        }
-      });
-    }
+      @Override
+      public void completed(ProgressEvent event) {
+        browser.removeProgressListener(this);
+        if (!browser.isDisposed())
+          browser.execute("document.body.scrollTop=0; document.documentElement.scrollTop=0;"); //$NON-NLS-1$
+      }
+    });
 
     fViewer.home();
   }
