@@ -1253,58 +1253,16 @@
    <extension
          point="org.rssowl.ui.KeywordFeed">
       <keywordFeed
-            icon="icons/obj16/fav_google.gif"
-            id="org.rssowl.ui.GoogleNewsKeywordFeed"
-            name="%keywordFeed.name"
-            url="http://news.google.com/news?q=[:]&amp;output=rss&amp;num=25">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_technorati.gif"
-            id="org.rssowl.ui.TechnoratiKeywordFeed"
-            name="%keywordFeed.name.0"
-            url="http://feeds.technorati.com/search/[:]">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_delicious.gif"
-            id="org.rssowl.ui.DeliciousKeywordFeed"
-            name="%keywordFeed.name.1"
-            url="http://del.icio.us/rss/tag/[:]">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_live.gif"
-            id="org.rssowl.ui.LiveKeywordFeed"
-            name="%keywordFeed.name.2"
-            url="http://www.bing.com/search?q=[:]&amp;format=rss&amp;count=25">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_digg.gif"
-            id="org.rssowl.ui.DiggKeywordFeed"
-            name="%keywordFeed.name.3"
-            url="http://digg.com/rss_search?s=[:]&amp;num=25">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_twitter.gif"
-            id="org.rssowl.ui.TwitterKeywordFeed"
-            name="%keywordFeed.name.4"
-            url="http://search.twitter.com/search.atom?q=[:]&amp;rpp=25">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_google.gif"
-            id="org.rssowl.ui.GoogleBlogKeywordFeed"
-            name="%keywordFeed.name.5"
-            url="http://blogsearch.google.com/blogsearch_feeds?q=[:]&amp;num=25&amp;output=rss">
-      </keywordFeed>
-      <keywordFeed
-            icon="icons/obj16/fav_youtube.gif"
-            id="org.rssowl.ui.YoutubeKeywordFeed"
-            name="%keywordFeed.name.6"
-            url="http://www.youtube.com/rss/tag/[:].rss">
-      </keywordFeed>
-      <keywordFeed
             icon="icons/obj16/fav_flickr.gif"
             id="org.rssowl.ui.FlickrKeywordFeed"
             name="%keywordFeed.name.7"
             url="http://www.flickr.com/services/feeds/photos_public.gne?tags=[:]&amp;format=rss_200">
+      </keywordFeed>
+      <keywordFeed
+            icon="icons/obj16/fav_vimeo.png"
+            id="org.rssowl.ui.VimeoKeywordFeed"
+            name="%keywordFeed.name.8"
+            url="http://vimeo.com/tag:[:]/rss">
       </keywordFeed>
    </extension>
    <extension
@@ -1587,7 +1545,7 @@
          point="org.rssowl.ui.FeedSearch">
       <feedSearch
             id="org.rssowl.ui.DefaultFeedSearch"
-            searchUrl="http://www.rssowl.org/rssowl2dg/search/search.php?k=[K]">
+            searchUrl="https://cloud.feedly.com/v3/search/feeds?query=[K]">
       </feedSearch>
    </extension>
    <extension
@@ -1721,16 +1679,6 @@
             id="org.rssowl.ui.InstapaperTransformer"
             name="%newsLinkTransformer.name"
             url="http://www.instapaper.com/m?u=[L]">
-      </linkTransformer>
-      <linkTransformer
-            id="org.rssowl.ui.ReadabilityTransformer"
-            name="%newsLinkTransformer.name.0"
-            url="http://mobile.rssowl.org/?u=[L]">
-      </linkTransformer>
-      <linkTransformer
-            id="org.rssowl.ui.GoogleTransformer"
-            name="%newsLinkTransformer.name.1"
-            url="http://www.google.com/gwt/x?u=[L]">
       </linkTransformer>
    </extension>
 </plugin>

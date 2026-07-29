@@ -1,5 +1,54 @@
 # Changelog
 
+## [Unreleased]
+
+### Removed
+
+- **Dropped dead third-party services from `org.rssowl.ui/plugin.xml` and `plugin.eclipse.xml`**
+  Several `KeywordFeed`, `LinkTransformer`, and `FeedSearch` contributions
+  pointed at services that have been shut down or had their RSS output
+  removed for years, so using them silently produced no results (or an
+  error). Both plugin manifests carried their own copies of these, so both
+  were cleaned up together. Removed:
+  - `KeywordFeed`: Google News, Delicious, Bing/Live, Digg,
+    Twitter/queryfeed, Google Blog Search, YouTube (GData v2 in
+    `plugin.xml`, the equally-dead `youtube.com/rss/tag` in
+    `plugin.eclipse.xml`). `plugin.eclipse.xml` additionally had a
+    Technorati entry (`feeds.technorati.com`, Technorati shut down
+    ~2014) that `plugin.xml` never had - removed too. Flickr is kept in
+    both files. `plugin.eclipse.xml` was also missing the Vimeo entry
+    that `plugin.xml` has (a pre-existing drift between the two
+    manifests, unrelated to any dead service) - added it there to match.
+  - `LinkTransformer`: Readability (`mobile.rssowl.org`, and Readability
+    itself shut down in 2016) and Google Mobilizer (`google.com/gwt/x`).
+    Instapaper is kept in both files.
+  - `FeedSearch`: the default `searchUrl` in both files pointed at
+    `rssowl.org/rssowl2dg/search/search.php`, which no longer resolves
+    (the rssowl.org domain is gone). Replaced with Feedly's public,
+    unauthenticated feed-search endpoint
+    (`https://cloud.feedly.com/v3/search/feeds?query=[K]`), which was
+    verified to return live JSON results for arbitrary keywords. No code
+    change was needed: `ImportElementsPage` already treats the response as
+    opaque text and regex-extracts feed-looking URLs from it
+    (`importFromOnlineResourceBruteforce`), so a JSON body works the same
+    way an HTML body did.
+
+  With both manifests cleaned up, the now-truly-orphaned message keys
+  were also removed from `plugin.properties`: `keywordFeed.name` (Google
+  News) through `keywordFeed.name.6` (YouTube), and
+  `newsLinkTransformer.name.0`/`.1` (Readability, Google Mobilizer).
+  `keywordFeed.name.7`/`.8` (Flickr/Vimeo) and `newsLinkTransformer.name`
+  (Instapaper) are kept.
+
+  Also now unreferenced anywhere in the codebase, but left in place since
+  deleting binary assets wasn't part of this pass:
+  `org.rssowl.ui/icons/obj16/fav_technorati.gif`, `fav_delicious.gif`,
+  `fav_live.gif`, `fav_digg.gif`, `fav_twitter.gif`, `fav_youtube.gif`.
+
+  `org.rssowl.ui/plugin.xml`
+  `org.rssowl.ui/plugin.eclipse.xml`
+  `org.rssowl.ui/plugin.properties`
+
 ## [2.10.3-beta] - 2026-07-28
 
 ### New Features
