@@ -5,7 +5,7 @@
     <link>https://sethbodine.github.io/RSSOwlnix</link>
     <description>Release notes and in-progress changes for RSSOwlnix.</description>
     <language>en</language>
-    <lastBuildDate>Mon, 27 Jul 2026 20:43:00 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 29 Jul 2026 21:27:52 GMT</lastBuildDate>
     <atom:link href="https://sethbodine.github.io/RSSOwlnix/updates.rss" rel="self" type="application/rss+xml"/>
     <image>
       <url>https://sethbodine.github.io/RSSOwlnix/rssowl.png</url>
@@ -13,11 +13,17 @@
       <link>https://sethbodine.github.io/RSSOwlnix</link>
     </image>
     <item>
-      <title>RSSOwlnix  Unreleased changes (2026-07-27)</title>
-      <link>https://github.com/SethBodine/RSSOwlnix/blob/main/CHANGELOG.md</link>
-      <guid isPermaLink="false">https://github.com/SethBodine/RSSOwlnix/unreleased/1c28fb3</guid>
-      <pubDate>Mon, 27 Jul 2026 00:00:00 GMT</pubDate>
+      <title>RSSOwlnix 2.10.3-beta</title>
+      <link>https://github.com/SethBodine/RSSOwlnix/releases/tag/v2.10.3-beta</link>
+      <guid isPermaLink="true">https://github.com/SethBodine/RSSOwlnix/releases/tag/v2.10.3-beta</guid>
+      <pubDate>Tue, 28 Jul 2026 00:00:00 GMT</pubDate>
       <description><![CDATA[<br><br>
+<h3>New Features</h3>
+<br><br>
+<ul>
+  <li><strong>Regex search conditions</strong> Added "matches regex" and "doesn't match regex" specifiers to Search News conditions for the Entire News, Title, Description, Author, and Attachments fields. Available anywhere the same condition-builder UI is used - Search News, Search Filters, and Saved Searches. Invalid patterns are flagged with an error decoration in the UI, and the specifier dropdown's tooltip explains regex syntax and the "match any" restriction (see Bug Fixes below). <code>org.rssowl.core/src/org/rssowl/core/persist/SearchSpecifier.java</code> <code>org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java</code> <code>org.rssowl.ui/src/org/rssowl/ui/internal/search/SearchConditionItem.java</code></li>
+</ul>
+<br><br>
 <h3>Bug Fixes</h3>
 <br><br>
 <ul>
@@ -38,7 +44,7 @@
   <code>org.rssowl.ui/src/org/rssowl/ui/internal/search/messages.properties</code>
 <br><br>
 <ul>
-  <li><strong>List/Classic layout incorrectly marked items read on scroll</strong> A previous fix ("Items not marked as read when scrolling past them using the scrollbar", below) added scroll/wheel/key-driven mark-as-read logic to <code>NewsTableControl</code>, the table control shared by both the List and Classic layouts. That logic fired on any scrollbar movement, mouse wheel, or arrow key press, regardless of whether the user had actually selected/read an item  so simply scrolling the list marked everything above the fold as read. Only Newspaper/Headlines (the browser-rendered view) is meant to mark items read on scrolling; List/Classic should only mark read via selection (click or arrow-key selection change) after the configured delay. Removed the scroll/wheel/key listeners and their associated <code>onScrolled</code>/<code>markItemsAboveViewport</code>/<code>onNavigateNoScrollbar</code>/ <code>markAllVisibleAsRead</code> methods from <code>NewsTableControl</code>. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java</code></li>
+  <li><strong>List/Classic layout incorrectly marked items read on scroll</strong> A previous fix ("Items not marked as read when scrolling past them using the scrollbar", below) added scroll/wheel/key-driven mark-as-read logic to <code>NewsTableControl</code>, the table control shared by both the List and Classic layouts. That logic fired on any scrollbar movement, mouse wheel, or arrow key press, regardless of whether the user had actually selected/read an item - so simply scrolling the list marked everything above the fold as read. Only Newspaper/Headlines (the browser-rendered view) is meant to mark items read on scrolling; List/Classic should only mark read via selection (click or arrow-key selection change) after the configured delay. Removed the scroll/wheel/key listeners and their associated <code>onScrolled</code>/<code>markItemsAboveViewport</code>/<code>onNavigateNoScrollbar</code>/ <code>markAllVisibleAsRead</code> methods from <code>NewsTableControl</code>. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableControl.java</code></li>
 </ul>
 <br><br>
 <ul>
@@ -46,11 +52,19 @@
 </ul>
 <br><br>
 <ul>
-  <li><strong>Fast scrollbar-drag in Newspaper mode didn't mark items read in bulk</strong> Mark-read-on-scroll in Newspaper mode was driven entirely by SWT-level <code>MouseWheel</code>/<code>MouseDown</code>/<code>KeyDown</code> events on the embedded browser control. Dragging the native scrollbar thumb directly doesn't generate those events  the gesture is handled inside the embedded browser engine's own scrollbar chrome and never reaches the host SWT widget  so scrolling through hundreds of items this way silently skipped mark-as-read entirely. Fixed by additionally binding a real DOM <code>scroll</code> listener inside the rendered page (re-injected after every page load, since a reload replaces the document), debounced client-side so a fast drag only triggers one evaluation once the scrollbar actually stops moving. On settle it calls back into the same debounced mark-read evaluation already used for mouse/keyboard interaction. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
+  <li><strong>Fast wheel/keyboard scrolling through large feeds could skip mark-as-read</strong> The debounced mark-read task was guarded with <code>fUserInteractionTracker.isRunning()</code>, intended to avoid rescheduling work that was already in flight. In practice this caused fast-scroll events to be silently dropped: the tracker only fired once at the first event's 500ms mark, capturing the scroll position at that instant and missing everything scrolled past afterward. The underlying <code>JobTracker</code> already debounces correctly by cancelling any pending job before rescheduling with the latest one, so the extra guard was unnecessary and actively harmful. Removed it - every scroll event now reschedules the task, so it always evaluates the final scroll position once the user pauses. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
 </ul>
 <br><br>
 <ul>
-  <li><strong>Single-item newspaper view never marked as read without scrollbar</strong> In newspaper layout, if a feed contained only one item and the page had no scrollbar, the item was never automatically marked as read regardless of how long the user viewed it. The <code>UserInteractionTask</code> scroll-detection condition used <code>lastNewsPosY > 0</code> to gate the mark-read logic  which always fails when the item sits at the top of the page (<code>offsetTop == 0</code>). Changed to <code>lastNewsPosY >= 0</code> so a single fully-visible item at position zero is correctly treated as read after the configured delay. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
+  <li><strong>Reaching the bottom of a feed didn't always mark the last item(s) as read</strong> The mark-read-on-scroll evaluation only checked whether an item's top edge had scrolled above the viewport, or whether the last item's top edge was within the viewport. A last item taller than the window, or an item skipped over by a fast scroll between debounced evaluations, could end up never satisfying either condition and be left permanently unread. Added explicit "at bottom" detection (<code>scrollPosY + windowHeight >= document.body.scrollHeight</code>) that marks all remaining visible unread items as read once the scrollbar reaches the very bottom of the page. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
+</ul>
+<br><br>
+<ul>
+  <li><strong>Fast scrollbar-drag in Newspaper mode didn't mark items read in bulk</strong> Mark-read-on-scroll in Newspaper mode was driven entirely by SWT-level <code>MouseWheel</code>/<code>MouseDown</code>/<code>KeyDown</code> events on the embedded browser control. Dragging the native scrollbar thumb directly doesn't generate those events - the gesture is handled inside the embedded browser engine's own scrollbar chrome and never reaches the host SWT widget - so scrolling through hundreds of items this way silently skipped mark-as-read entirely. Fixed by additionally binding a real DOM <code>scroll</code> listener inside the rendered page (re-injected after every page load, since a reload replaces the document), debounced client-side so a fast drag only triggers one evaluation once the scrollbar actually stops moving. On settle it calls back into the same debounced mark-read evaluation already used for mouse/keyboard interaction. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
+</ul>
+<br><br>
+<ul>
+  <li><strong>Single-item newspaper view never marked as read without scrollbar</strong> In newspaper layout, if a feed contained only one item and the page had no scrollbar, the item was never automatically marked as read regardless of how long the user viewed it. The <code>UserInteractionTask</code> scroll-detection condition used <code>lastNewsPosY > 0</code> to gate the mark-read logic - which always fails when the item sits at the top of the page (<code>offsetTop == 0</code>). Changed to <code>lastNewsPosY >= 0</code> so a single fully-visible item at position zero is correctly treated as read after the configured delay. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
 </ul>
 <br><br>
 <ul>
@@ -58,7 +72,7 @@
 </ul>
 <br><br>
 <ul>
-  <li><strong>Switching feeds A  B  A failed to re-render the newspaper view</strong> Navigating from feed A to feed B and back to A sometimes left the newspaper view stale or blank. The <code>internalSetInput</code> method guarded against redundant <code>setUrl</code> calls using <code>!inputUrl.equals(currentUrl)</code>  but after ABA the browser URL already matched A's URL from the first visit, so the guard silently skipped the <code>setUrl</code> call and the page was not re-rendered. Fixed by bypassing the URL equality check when <code>force=true</code>, ensuring the page is always regenerated when explicitly requested. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
+  <li><strong>Switching feeds A  B  A failed to re-render the newspaper view</strong> Navigating from feed A to feed B and back to A sometimes left the newspaper view stale or blank. The <code>internalSetInput</code> method guarded against redundant <code>setUrl</code> calls using <code>!inputUrl.equals(currentUrl)</code> - but after ABA the browser URL already matched A's URL from the first visit, so the guard silently skipped the <code>setUrl</code> call and the page was not re-rendered. Fixed by bypassing the URL equality check when <code>force=true</code>, ensuring the page is always regenerated when explicitly requested. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java</code></li>
 </ul>]]></description>
     </item>
     <item>
@@ -98,7 +112,7 @@
 <h3>Bug Fixes</h3>
 <br><br>
 <ul>
-  <li><strong>GDI handle exhaustion after prolonged use</strong> (#94/#131) <code>NewsTableLabelProvider</code> had two <code>dispose()</code> methods  the original at the bottom of the class (no null guard, no <code>super.dispose()</code>) and a corrected version added near the top (null-guards <code>fResources</code>, calls <code>super.dispose()</code>). The duplicate caused a compile failure. The old version has been removed; the corrected version is retained. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableLabelProvider.java</code></li>
+  <li><strong>GDI handle exhaustion after prolonged use</strong> (#94/#131) <code>NewsTableLabelProvider</code> had two <code>dispose()</code> methods - the original at the bottom of the class (no null guard, no <code>super.dispose()</code>) and a corrected version added near the top (null-guards <code>fResources</code>, calls <code>super.dispose()</code>). The duplicate caused a compile failure. The old version has been removed; the corrected version is retained. <code>org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsTableLabelProvider.java</code></li>
 </ul>
 <br><br>
 <ul>
@@ -106,7 +120,7 @@
 </ul>
 <br><br>
 <ul>
-  <li><strong>Toolbar separator causes buttons to disappear</strong> (#180) When separators were present in the main toolbar, all buttons after the first separator were hidden after editing. The cause was that empty <code>ToolBarManager</code> segments  created when a separator appeared at the start of the list or immediately after another separator  were being added to the coolbar and consuming layout space without rendering, which clipped subsequent segments. Empty toolbar segments are now skipped before being committed to the coolbar. <code>org.rssowl.ui/src/org/rssowl/ui/internal/CoolBarAdvisor.java</code></li>
+  <li><strong>Toolbar separator causes buttons to disappear</strong> (#180) When separators were present in the main toolbar, all buttons after the first separator were hidden after editing. The cause was that empty <code>ToolBarManager</code> segments - created when a separator appeared at the start of the list or immediately after another separator - were being added to the coolbar and consuming layout space without rendering, which clipped subsequent segments. Empty toolbar segments are now skipped before being committed to the coolbar. <code>org.rssowl.ui/src/org/rssowl/ui/internal/CoolBarAdvisor.java</code></li>
 </ul>
 <br><br>
 <ul>
@@ -141,7 +155,7 @@
 </ul>
 <br><br>
 <ul>
-  <li><strong>P2 update site on GitHub Pages</strong> (#165) The in-app update site (<code>Help  Check for Updates</code>) is now built by CI and published automatically on every push to <code>main</code>. All three update channels are live  program updates, language packs (empty, ready for future use) and add-ons (empty, ready for future use)  eliminating the missing repository errors previously shown on startup. All Xyrio upstream URLs have been replaced across <code>rssowlnix.product</code>, both <code>feature.xml</code> variants and <code>category.xml</code>. HTTPS is required for all P2 transport connections; redirects are followed provided TLS certificate verification passes; HTTP downgrade redirects are blocked.</li>
+  <li><strong>P2 update site on GitHub Pages</strong> (#165) The in-app update site (<code>Help  Check for Updates</code>) is now built by CI and published automatically on every push to <code>main</code>. All three update channels are live - program updates, language packs (empty, ready for future use) and add-ons (empty, ready for future use) - eliminating the missing repository errors previously shown on startup. All Xyrio upstream URLs have been replaced across <code>rssowlnix.product</code>, both <code>feature.xml</code> variants and <code>category.xml</code>. HTTPS is required for all P2 transport connections; redirects are followed provided TLS certificate verification passes; HTTP downgrade redirects are blocked.</li>
 </ul>
 <br><br>
   | Channel | URL |
@@ -165,13 +179,13 @@
 </ul>
 <br><br>
 <ul>
-  <li><strong>TOCTOU race in notification popup checks</strong> (CodeQL #19/#20/#21  High, CWE-367)  accepted risk Three <code>isPopupVisible()</code> guard checks before calling <code>show()</code> are not atomic. A race could cause two notification popups to appear briefly. This is an accepted UI-only risk: no data is exposed and no security boundary is crossed. The worst outcome is a briefly doubled popup. A structural fix would require making <code>isPopupVisible()</code> and <code>show()</code> atomic in <code>NotificationService</code>, deferred to a future release. Suppression comments added explaining the rationale. <code>org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java</code></li>
+  <li><strong>TOCTOU race in notification popup checks</strong> (CodeQL #19/#20/#21  High, CWE-367) - accepted risk Three <code>isPopupVisible()</code> guard checks before calling <code>show()</code> are not atomic. A race could cause two notification popups to appear briefly. This is an accepted UI-only risk: no data is exposed and no security boundary is crossed. The worst outcome is a briefly doubled popup. A structural fix would require making <code>isPopupVisible()</code> and <code>show()</code> atomic in <code>NotificationService</code>, deferred to a future release. Suppression comments added explaining the rationale. <code>org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java</code></li>
 </ul>
 <br><br>
 <h3>Tests</h3>
 <br><br>
 <ul>
-  <li><strong>Local information disclosure via world-readable temp files</strong> (CodeQL #1118  Medium, CWE-732) Eight <code>File.createTempFile()</code> calls in test files created world-readable temporary files on Linux/macOS. Replaced with <code>Files.createTempFile()</code> (Java NIO) which sets restrictive permissions by default. Test code only  no production impact. <code>org.rssowl.core.tests/src/org/rssowl/core/tests/importer/ImportExportOPMLTest.java</code> <code>org.rssowl.core.tests/src/org/rssowl/core/tests/persist/StartupShutdownTest.java</code> <code>org.rssowl.core.tests/src/org/rssowl/core/tests/ui/DownloadServiceTests.java</code></li>
+  <li><strong>Local information disclosure via world-readable temp files</strong> (CodeQL #1118  Medium, CWE-732) Eight <code>File.createTempFile()</code> calls in test files created world-readable temporary files on Linux/macOS. Replaced with <code>Files.createTempFile()</code> (Java NIO) which sets restrictive permissions by default. Test code only - no production impact. <code>org.rssowl.core.tests/src/org/rssowl/core/tests/importer/ImportExportOPMLTest.java</code> <code>org.rssowl.core.tests/src/org/rssowl/core/tests/persist/StartupShutdownTest.java</code> <code>org.rssowl.core.tests/src/org/rssowl/core/tests/ui/DownloadServiceTests.java</code></li>
 </ul>]]></description>
     </item>
     <item>
@@ -207,11 +221,11 @@
 </ul>
 <br><br>
 <ul>
-  <li><strong>Application takes 2+ minutes to launch on domain-joined Windows machines</strong> <code>doHandshake()</code> in <code>Activator.java</code> used <code>InetAddress.getByName()</code> which triggers a reverse DNS lookup  blocking for up to 2 minutes on domain-joined machines where HKLM registry reads go through Group Policy verification. Fixed using <code>InetAddress.getLoopbackAddress()</code> with an explicit 5-second connect timeout. A db4o JVM shutdown hook was also added to ensure the database file lock is released on any JVM exit, preventing orphaned processes from blocking subsequent launches. <code>org.rssowl.ui/src/org/rssowl/ui/internal/Activator.java</code> <code>org.rssowl.core/src/org/rssowl/core/internal/persist/service/DBManager.java</code></li>
+  <li><strong>Application takes 2+ minutes to launch on domain-joined Windows machines</strong> <code>doHandshake()</code> in <code>Activator.java</code> used <code>InetAddress.getByName()</code> which triggers a reverse DNS lookup - blocking for up to 2 minutes on domain-joined machines where HKLM registry reads go through Group Policy verification. Fixed using <code>InetAddress.getLoopbackAddress()</code> with an explicit 5-second connect timeout. A db4o JVM shutdown hook was also added to ensure the database file lock is released on any JVM exit, preventing orphaned processes from blocking subsequent launches. <code>org.rssowl.ui/src/org/rssowl/ui/internal/Activator.java</code> <code>org.rssowl.core/src/org/rssowl/core/internal/persist/service/DBManager.java</code></li>
 </ul>
 <br><br>
 <ul>
-  <li><strong>Slow startup caused by corrupt <code>workbench.xmi</code></strong> If the JVM was killed mid-write, the <code>workbench.xmi</code> UI state file could become corrupt, causing Eclipse to hang on startup. The application now validates and surgically repairs the file at startup  trimming back to the last well-formed closing tag and re-closing the root element  preserving as much window/tab/perspective state as possible. A <code>.corrupt.bak</code> backup is written before any modification. <code>org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchAdvisor.java</code></li>
+  <li><strong>Slow startup caused by corrupt <code>workbench.xmi</code></strong> If the JVM was killed mid-write, the <code>workbench.xmi</code> UI state file could become corrupt, causing Eclipse to hang on startup. The application now validates and surgically repairs the file at startup - trimming back to the last well-formed closing tag and re-closing the root element - preserving as much window/tab/perspective state as possible. A <code>.corrupt.bak</code> backup is written before any modification. <code>org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchAdvisor.java</code></li>
 </ul>
 <br><br>
 <ul>
