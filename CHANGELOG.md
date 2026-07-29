@@ -1,6 +1,20 @@
 # Changelog
 
-## [Unreleased]
+## [2.10.3-beta] - 2026-07-28
+
+### New Features
+
+- **Regex search conditions**
+  Added "matches regex" and "doesn't match regex" specifiers to Search
+  News conditions for the Entire News, Title, Description, Author, and
+  Attachments fields. Available anywhere the same condition-builder UI is
+  used - Search News, Search Filters, and Saved Searches. Invalid patterns
+  are flagged with an error decoration in the UI, and the specifier
+  dropdown's tooltip explains regex syntax and the "match any" restriction
+  (see Bug Fixes below).
+  `org.rssowl.core/src/org/rssowl/core/persist/SearchSpecifier.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/search/ModelSearchImpl.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/search/SearchConditionItem.java`
 
 ### Bug Fixes
 
@@ -68,7 +82,7 @@
   `NewsTableControl`, the table control shared by both the List and Classic
   layouts. That logic fired on any scrollbar movement, mouse wheel, or arrow
   key press, regardless of whether the user had actually selected/read an
-  item  so simply scrolling the list marked everything above the fold as
+  item - so simply scrolling the list marked everything above the fold as
   read. Only Newspaper/Headlines (the browser-rendered view) is meant to
   mark items read on scrolling; List/Classic should only mark read via
   selection (click or arrow-key selection change) after the configured
@@ -93,12 +107,35 @@
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/FeedView.java`
   `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsContentProvider.java`
 
+- **Fast wheel/keyboard scrolling through large feeds could skip mark-as-read**
+  The debounced mark-read task was guarded with `fUserInteractionTracker.isRunning()`,
+  intended to avoid rescheduling work that was already in flight. In practice this
+  caused fast-scroll events to be silently dropped: the tracker only fired once at
+  the first event's 500ms mark, capturing the scroll position at that instant and
+  missing everything scrolled past afterward. The underlying `JobTracker` already
+  debounces correctly by cancelling any pending job before rescheduling with the
+  latest one, so the extra guard was unnecessary and actively harmful. Removed it -
+  every scroll event now reschedules the task, so it always evaluates the final
+  scroll position once the user pauses.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java`
+
+- **Reaching the bottom of a feed didn't always mark the last item(s) as read**
+  The mark-read-on-scroll evaluation only checked whether an item's top edge had
+  scrolled above the viewport, or whether the last item's top edge was within the
+  viewport. A last item taller than the window, or an item skipped over by a fast
+  scroll between debounced evaluations, could end up never satisfying either
+  condition and be left permanently unread. Added explicit "at bottom" detection
+  (`scrollPosY + windowHeight >= document.body.scrollHeight`) that marks all
+  remaining visible unread items as read once the scrollbar reaches the very
+  bottom of the page.
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsBrowserViewer.java`
+
 - **Fast scrollbar-drag in Newspaper mode didn't mark items read in bulk**
   Mark-read-on-scroll in Newspaper mode was driven entirely by SWT-level
   `MouseWheel`/`MouseDown`/`KeyDown` events on the embedded browser control.
   Dragging the native scrollbar thumb directly doesn't generate those
-  events  the gesture is handled inside the embedded browser engine's own
-  scrollbar chrome and never reaches the host SWT widget  so scrolling
+  events - the gesture is handled inside the embedded browser engine's own
+  scrollbar chrome and never reaches the host SWT widget - so scrolling
   through hundreds of items this way silently skipped mark-as-read entirely.
   Fixed by additionally binding a real DOM `scroll` listener inside the
   rendered page (re-injected after every page load, since a reload replaces
@@ -112,7 +149,7 @@
   In newspaper layout, if a feed contained only one item and the page had no
   scrollbar, the item was never automatically marked as read regardless of how
   long the user viewed it. The `UserInteractionTask` scroll-detection condition
-  used `lastNewsPosY > 0` to gate the mark-read logic  which always fails when
+  used `lastNewsPosY > 0` to gate the mark-read logic - which always fails when
   the item sits at the top of the page (`offsetTop == 0`). Changed to
   `lastNewsPosY >= 0` so a single fully-visible item at position zero is
   correctly treated as read after the configured delay.
@@ -135,7 +172,7 @@
 - **Switching feeds A  B  A failed to re-render the newspaper view**
   Navigating from feed A to feed B and back to A sometimes left the newspaper
   view stale or blank. The `internalSetInput` method guarded against redundant
-  `setUrl` calls using `!inputUrl.equals(currentUrl)`  but after ABA the
+  `setUrl` calls using `!inputUrl.equals(currentUrl)` - but after ABA the
   browser URL already matched A's URL from the first visit, so the guard
   silently skipped the `setUrl` call and the page was not re-rendered. Fixed
   by bypassing the URL equality check when `force=true`, ensuring the page is
@@ -184,7 +221,7 @@
 ### Bug Fixes
 
 - **GDI handle exhaustion after prolonged use** (#94/#131)
-  `NewsTableLabelProvider` had two `dispose()` methods  the original at the
+  `NewsTableLabelProvider` had two `dispose()` methods - the original at the
   bottom of the class (no null guard, no `super.dispose()`) and a corrected
   version added near the top (null-guards `fResources`, calls `super.dispose()`).
   The duplicate caused a compile failure. The old version has been removed;
@@ -202,8 +239,8 @@
 - **Toolbar separator causes buttons to disappear** (#180)
   When separators were present in the main toolbar, all buttons after the first
   separator were hidden after editing. The cause was that empty `ToolBarManager`
-  segments  created when a separator appeared at the start of the list or
-  immediately after another separator  were being added to the coolbar and
+  segments - created when a separator appeared at the start of the list or
+  immediately after another separator - were being added to the coolbar and
   consuming layout space without rendering, which clipped subsequent segments.
   Empty toolbar segments are now skipped before being committed to the coolbar.
   `org.rssowl.ui/src/org/rssowl/ui/internal/CoolBarAdvisor.java`
@@ -260,8 +297,8 @@
 - **P2 update site on GitHub Pages** (#165)
   The in-app update site (`Help  Check for Updates`) is now built by CI and
   published automatically on every push to `main`. All three update channels are
-  live  program updates, language packs (empty, ready for future use) and
-  add-ons (empty, ready for future use)  eliminating the missing repository
+  live - program updates, language packs (empty, ready for future use) and
+  add-ons (empty, ready for future use) - eliminating the missing repository
   errors previously shown on startup. All Xyrio upstream URLs have been replaced
   across `rssowlnix.product`, both `feature.xml` variants and `category.xml`.
   HTTPS is required for all P2 transport connections; redirects are followed
@@ -301,7 +338,7 @@
   `try/finally` guarantees unlock in all paths.
   `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
 
-- **TOCTOU race in notification popup checks** (CodeQL #19/#20/#21  High, CWE-367)  accepted risk
+- **TOCTOU race in notification popup checks** (CodeQL #19/#20/#21  High, CWE-367) - accepted risk
   Three `isPopupVisible()` guard checks before calling `show()` are not atomic.
   A race could cause two notification popups to appear briefly. This is an
   accepted UI-only risk: no data is exposed and no security boundary is crossed.
@@ -315,7 +352,7 @@
 - **Local information disclosure via world-readable temp files** (CodeQL #1118  Medium, CWE-732)
   Eight `File.createTempFile()` calls in test files created world-readable
   temporary files on Linux/macOS. Replaced with `Files.createTempFile()` (Java
-  NIO) which sets restrictive permissions by default. Test code only  no
+  NIO) which sets restrictive permissions by default. Test code only - no
   production impact.
   `org.rssowl.core.tests/src/org/rssowl/core/tests/importer/ImportExportOPMLTest.java`
   `org.rssowl.core.tests/src/org/rssowl/core/tests/persist/StartupShutdownTest.java`
@@ -369,7 +406,7 @@
 
 - **Application takes 2+ minutes to launch on domain-joined Windows machines**
   `doHandshake()` in `Activator.java` used `InetAddress.getByName()` which
-  triggers a reverse DNS lookup  blocking for up to 2 minutes on domain-joined
+  triggers a reverse DNS lookup - blocking for up to 2 minutes on domain-joined
   machines where HKLM registry reads go through Group Policy verification. Fixed
   using `InetAddress.getLoopbackAddress()` with an explicit 5-second connect
   timeout. A db4o JVM shutdown hook was also added to ensure the database file
@@ -381,8 +418,8 @@
 - **Slow startup caused by corrupt `workbench.xmi`**
   If the JVM was killed mid-write, the `workbench.xmi` UI state file could
   become corrupt, causing Eclipse to hang on startup. The application now
-  validates and surgically repairs the file at startup  trimming back to the
-  last well-formed closing tag and re-closing the root element  preserving as
+  validates and surgically repairs the file at startup - trimming back to the
+  last well-formed closing tag and re-closing the root element - preserving as
   much window/tab/perspective state as possible. A `.corrupt.bak` backup is
   written before any modification.
   `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchAdvisor.java`
