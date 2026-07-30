@@ -1713,7 +1713,7 @@
             icon="icons/obj16/share_threads.gif"
             id="org.rssowl.ui.ThreadsShareProvider"
             name="Threads"
-            url="https://www.threads.net/intent/post?text=[T]%20[L]">
+            url="https://www.threads.com/intent/post?text=[T]%20[L]">
       </shareProvider>
       <shareProvider
             enabled="true"
@@ -1760,43 +1760,13 @@
             url="mailto">
       </shareProvider>
 
-      <!-- Read Later / Bookmarking -->
-      <shareProvider
-            enabled="true"
-            icon="icons/obj16/share_pocket.gif"
-            id="org.rssowl.ui.PocketShareProvider"
-            name="%shareProvider.name.22"
-            url="https://getpocket.com/save?url=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_evernote.gif"
-            id="org.rssowl.ui.EvernoteShareProvider"
-            name="%shareProvider.name.21"
-            url="https://www.evernote.com/clip.action?url=[L]&amp;title=[T]">
-      </shareProvider>
-
       <!-- Blogging / Publishing -->
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_substack.gif"
-            id="org.rssowl.ui.SubstackShareProvider"
-            name="Substack Notes"
-            url="https://substack.com/notes">
-      </shareProvider>
       <shareProvider
             enabled="false"
             icon="icons/obj16/share_tumblr.gif"
             id="org.rssowl.ui.TumblrShareProvider"
             name="%shareProvider.name.19"
             url="https://www.tumblr.com/widgets/share/tool?canonicalUrl=[L]&amp;title=[T]">
-      </shareProvider>
-      <shareProvider
-            enabled="false"
-            icon="icons/obj16/share_buffer.gif"
-            id="org.rssowl.ui.BufferShareProvider"
-            name="%shareProvider.name.25"
-            url="https://buffer.com/add?url=[L]&amp;text=[T]">
       </shareProvider>
 
       <!-- Utilities -->
