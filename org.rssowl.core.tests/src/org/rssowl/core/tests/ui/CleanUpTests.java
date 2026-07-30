@@ -28,7 +28,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.rssowl.core.Owl;
 import org.rssowl.core.internal.persist.service.PersistenceServiceImpl;
@@ -108,7 +107,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Last Visit Date = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(true, 3, false, 0, false, false, false, false, 0, false, 0, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(true, 3, false, 0, false, false, false, 0, false, 0, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -242,7 +241,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Last Update Date = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, true, 3, false, false, false, false, 0, false, 0, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, true, 3, false, false, false, 0, false, 0, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -295,7 +294,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Last Update Date = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, true, false, false, false, 0, false, 0, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, true, false, false, 0, false, 0, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -362,7 +361,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Delete Duplicates */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, true, false, false, 0, false, 0, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, true, false, 0, false, 0, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -428,7 +427,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Last Update Date = 3 days, Last Visit = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(true, 3, true, 3, false, false, false, false, 0, false, 0, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(true, 3, true, 3, false, false, false, 0, false, 0, false, false, false);
 
     bm3.setLastVisitDate(new Date(System.currentTimeMillis() - 4 * DAY));
 
@@ -512,7 +511,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max News Count: 1 */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, true, 1, false, 0, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, true, 1, false, 0, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -530,7 +529,7 @@ public class CleanUpTests {
     }
 
     /* Max News Count: 2 */
-    ops = new CleanUpOperations(false, 0, false, 0, false, false, false, true, 2, false, 0, false, false, false);
+    ops = new CleanUpOperations(false, 0, false, 0, false, false, true, 2, false, 0, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -583,7 +582,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max News Age = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, false, 0, true, 3, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, 0, true, 3, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -601,7 +600,7 @@ public class CleanUpTests {
     }
 
     /* Max News Age = 1 days */
-    ops = new CleanUpOperations(false, 0, false, 0, false, false, false, false, 0, true, 1, false, false, false);
+    ops = new CleanUpOperations(false, 0, false, 0, false, false, false, 0, true, 1, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -660,7 +659,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max News Age = 3 days and keep unread */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, false, 0, true, 3, false, true, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, 0, true, 3, false, true, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -732,7 +731,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max News Age = 3 days and keep unread */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, false, 0, true, 3, false, false, true);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, 0, true, 3, false, false, true);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -805,7 +804,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max News Age = 3 days and keep unread */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, false, 0, true, 3, false, false, true);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, 0, true, 3, false, false, true);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -884,7 +883,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max Last Visit Age = 3 days && Max News Age = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(true, 3, false, 0, false, false, false, false, 0, true, 3, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(true, 3, false, 0, false, false, false, 0, true, 3, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -948,7 +947,7 @@ public class CleanUpTests {
     marks.add(bm3);
 
     /* Max News Age = 3 days and Max Count = 1 */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, false, true, 1, true, 3, false, false, false);
+    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, true, 1, true, 3, false, false, false);
 
     {
       CleanUpModel model = new CleanUpModel(ops, marks);
@@ -968,57 +967,6 @@ public class CleanUpTests {
 
       assertEquals(news4, ((NewsTask) tasks1.get(0)).getNews().iterator().next().resolve());
       assertEquals(news1, ((NewsTask) tasks2.get(0)).getNews().iterator().next().resolve());
-    }
-  }
-
-  /**
-   * @throws Exception
-   */
-  @Test
-  @Ignore
-  public void testCleanUpBookmarksBySynchronization() throws Exception {
-    IFolder rootFolder = fFactory.createFolder(null, null, "Root");
-    OwlDAO.save(rootFolder);
-
-    IFeed feed1 = fFactory.createFeed(null, new URI("reader://www.feed1.com"));
-    IFeed feed2 = fFactory.createFeed(null, new URI("reader://www.feed2.com"));
-    IFeed feed3 = fFactory.createFeed(null, new URI("reader://www.rssowl.org/node/feed"));
-
-    OwlDAO.save(feed1);
-    OwlDAO.save(feed2);
-    OwlDAO.save(feed3);
-
-    IBookMark bm1 = fFactory.createBookMark(null, rootFolder, new FeedLinkReference(feed1.getLink()), "BM1");
-    IBookMark bm2 = fFactory.createBookMark(null, rootFolder, new FeedLinkReference(feed2.getLink()), "BM2");
-    IBookMark bm3 = fFactory.createBookMark(null, rootFolder, new FeedLinkReference(feed3.getLink()), "BM3");
-
-    OwlDAO.save(bm1);
-    OwlDAO.save(bm2);
-    OwlDAO.save(bm3);
-
-    List<IBookMark> marks = new ArrayList<IBookMark>();
-    marks.add(bm1);
-    marks.add(bm2);
-    marks.add(bm3);
-
-    /* Last Update Date = 3 days */
-    CleanUpOperations ops = new CleanUpOperations(false, 0, false, 0, false, false, true, false, 0, false, 0, false, false, false);
-
-    {
-      CleanUpModel model = new CleanUpModel(ops, marks);
-      model.generate(new NullProgressMonitor());
-      List<CleanUpGroup> groups = model.getTasks();
-
-      /* Assert Filled */
-      assertEquals(2, groups.size());
-
-      List<CleanUpTask> tasks = groups.get(1).getTasks();
-      assertEquals(2, tasks.size());
-      assertEquals(true, tasks.get(0) instanceof BookMarkTask);
-      assertEquals(true, tasks.get(1) instanceof BookMarkTask);
-
-      assertEquals(bm1, ((BookMarkTask) tasks.get(0)).getMark());
-      assertEquals(bm2, ((BookMarkTask) tasks.get(1)).getMark());
     }
   }
 }
