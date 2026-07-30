@@ -2,6 +2,73 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Added modern replacements for the dead `KeywordFeed` sources in `org.rssowl.ui/plugin.xml` and `plugin.eclipse.xml`**
+  The previous pass dropped Google News, Delicious, Digg, Twitter, Google
+  Blog Search, and YouTube (GData) because their RSS output was gone. This
+  pass researches and adds working replacements, verified live as of
+  July 2026. Both plugin manifests (`plugin.xml` and `plugin.eclipse.xml`)
+  and both properties files (`plugin.properties` and
+  `plugin.eclipse.properties`) were updated together, matching the
+  existing Flickr/Vimeo pattern.
+
+  Added:
+  - `KeywordFeed`: **Reddit** (`org.rssowl.ui.RedditKeywordFeed`), using
+    Reddit's still-live `https://www.reddit.com/search.rss?q=[:]` search
+    endpoint. Reuses the existing `icons/obj16/share_reddit.gif` icon
+    (already shipped for the share-to-Reddit action). Caveat: Reddit
+    began rate-limiting unauthenticated RSS access in mid-2026 (as low as
+    1 request/minute per a widely-reported case) and has publicly flagged
+    RSS as a candidate for future restriction alongside its now-closed
+    unauthenticated `.json` endpoints. The feed works today but should be
+    considered at risk; if Reddit closes it, this entry will need to be
+    removed or replaced.
+  - `KeywordFeed`: **Hacker News** (`org.rssowl.ui.HackerNewsKeywordFeed`),
+    using `https://hnrss.org/newest?q=[:]`. HN's own search (Algolia,
+    `hn.algolia.com/api/v1/search`) only returns JSON, and the
+    `KeywordFeed` extension point has no transform/parse hook - it treats
+    `url` as a literal feed location - so raw Algolia JSON is not usable
+    here without new Java code (a custom interpreter or reusing the
+    `LinkTransformer` machinery, neither of which exists for JSON today).
+    Used `hnrss.org` instead: a long-running (10+ years), community-run
+    proxy that queries the same Algolia index server-side and returns
+    real RSS/XML, confirmed live. No icon asset exists for
+    Hacker News in `icons/obj16/`; a new one should be added (entry
+    currently ships without an `icon` attribute, which is valid per
+    `KeywordFeed.exsd`).
+  - `KeywordFeed`: **Mastodon** (`org.rssowl.ui.MastodonKeywordFeed`),
+    using `https://mastodon.social/tags/[:].rss`, Mastodon's built-in
+    per-instance hashtag RSS. Pinned to the flagship `mastodon.social`
+    instance since the extension point only supports one fixed URL
+    pattern per entry and hashtag results are local to whichever
+    instance is queried (results will differ from other instances, and
+    posts from users who aren't on/known to mastodon.social may be
+    under-represented). No icon asset exists for Mastodon either; a new
+    one should be added.
+
+  Deliberately not added, with reasoning:
+  - **YouTube**: channel RSS (`youtube.com/feeds/videos.xml?channel_id=`)
+    still works, but there is no keyword-search RSS - YouTube retired
+    that in the GData v2 shutdown, and the current Data API v3 search
+    endpoint requires an API key, which `KeywordFeed` has no facility to
+    supply. Pointing the entry at an HTML search-results page wouldn't
+    work either, since RSSOwl expects `url` to resolve directly to a
+    feed. Recommendation: leave YouTube out of `KeywordFeed`; users who
+    know a channel's ID can already add it as a normal bookmark via the
+    existing `videos.xml?channel_id=` URL.
+  - **Lemmy**: RSS exists per-community per-instance
+    (`https://instance.tld/feeds/c/community.xml`), but there is no
+    cross-instance keyword search endpoint - `[:]` would have to be a
+    known community name on a specific instance, not a search term,
+    which doesn't match how every other `KeywordFeed` entry behaves.
+    Better suited to being added as a handful of ordinary bookmarks
+    (e.g. for specific communities on lemmy.world) than as a
+    `KeywordFeed` search provider.
+  - **Substack**: only per-publication feeds exist
+    (`https://name.substack.com/feed`); there is no site-wide search-by-
+    keyword RSS endpoint to substitute `[:]` into.
+
 ### Removed
 
 - **Finished removing Google Reader / synchronization code from core, UI, and tests**

@@ -1589,6 +1589,22 @@
             name="%keywordFeed.name.8"
             url="http://vimeo.com/tag:[:]/rss">
       </keywordFeed>
+      <keywordFeed
+            icon="icons/obj16/share_reddit.gif"
+            id="org.rssowl.ui.RedditKeywordFeed"
+            name="%keywordFeed.name.9"
+            url="https://www.reddit.com/search.rss?q=[:]">
+      </keywordFeed>
+      <keywordFeed
+            id="org.rssowl.ui.HackerNewsKeywordFeed"
+            name="%keywordFeed.name.10"
+            url="https://hnrss.org/newest?q=[:]">
+      </keywordFeed>
+      <keywordFeed
+            id="org.rssowl.ui.MastodonKeywordFeed"
+            name="%keywordFeed.name.11"
+            url="https://mastodon.social/tags/[:].rss">
+      </keywordFeed>
    </extension>
    <extension
          point="org.eclipse.ui.statusHandlers">
