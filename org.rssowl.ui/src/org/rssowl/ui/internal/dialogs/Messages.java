@@ -237,15 +237,6 @@ public class Messages extends NLS {
   public static String StartupProgressDialog_PROGRESS_INFO;
   public static String StartupProgressDialog_PROGRESS_MESSAGE;
   public static String StartupProgressDialog_SKIP;
-  public static String SynchronizationStatusDialog_LAST_SYNC_ERROR;
-  public static String SynchronizationStatusDialog_LAST_SYNC_ERROR_MSG;
-  public static String SynchronizationStatusDialog_LAST_SYNC_ERROR_MSG_LINK;
-  public static String SynchronizationStatusDialog_LAST_SYNC_OK;
-  public static String SynchronizationStatusDialog_LAST_SYNC_OK_MSG;
-  public static String SynchronizationStatusDialog_LAST_SYNC_OK_MSG_N;
-  public static String SynchronizationStatusDialog_NO_STATUS_AVAILABLE;
-  public static String SynchronizationStatusDialog_NO_STATUS_MSG;
-  public static String SynchronizationStatusDialog_SYNC_STATUS;
   public static String UpdateDialog_CURRENT_VERSION;
   public static String UpdateDialog_DESCRIPTION;
   public static String UpdateDialog_DL_SIZE;

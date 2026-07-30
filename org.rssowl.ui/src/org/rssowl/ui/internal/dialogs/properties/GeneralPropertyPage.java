@@ -63,7 +63,6 @@ import org.rssowl.core.persist.reference.FeedLinkReference;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.ReparentInfo;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.dialogs.properties.IEntityPropertyPage;
 import org.rssowl.ui.dialogs.properties.IPropertyDialogSite;
@@ -111,7 +110,6 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
   private boolean fReloadRequired;
   private boolean fSettingsChanged;
   private boolean fIsSingleBookMark;
-  private boolean fIsSingleSynchronizedBookMark;
 
   /* Settings */
   private List<IPreferenceScope> fEntityPreferences;
@@ -144,7 +142,6 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
 
     if (fEntities.size() == 1 && fEntities.get(0) instanceof IBookMark) {
       fIsSingleBookMark = true;
-      fIsSingleSynchronizedBookMark = SyncUtils.isSynchronized((IBookMark)fEntities.get(0));
     }
   }
 
@@ -200,10 +197,10 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
         feedLabel.setLayoutData(new GridData(SWT.END, SWT.CENTER, false, false));
         feedLabel.setText(Messages.GeneralPropertyPage_LINK);
 
-        fFeedInput = fIsSingleSynchronizedBookMark ? new Text(container, SWT.READ_ONLY | SWT.BORDER) : new Text(container, SWT.BORDER);
+        fFeedInput = new Text(container, SWT.BORDER);
         fFeedInput.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
         String feedLink = ((IBookMark) entity).getFeedLinkReference().getLinkAsText();
-        fFeedInput.setText(fIsSingleSynchronizedBookMark ? URIUtils.toHTTP(feedLink) : feedLink);
+        fFeedInput.setText(feedLink);
         ((GridData) fFeedInput.getLayoutData()).widthHint = fSite.getHorizontalPixels(IDialogConstants.ENTRY_FIELD_WIDTH);
 
         /* Name */
@@ -421,7 +418,7 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
    */
   @Override
   public void setFocus() {
-    if (fFeedInput != null && !fIsSingleSynchronizedBookMark) {
+    if (fFeedInput != null) {
       fFeedInput.setFocus();
       fFeedInput.selectAll();
     } else if (fNameInput != null) {
@@ -560,7 +557,7 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
         uriAsString = URIUtils.ensureProtocol(uriAsString);
 
       /* Check for changed Feed */
-      if (!fIsSingleSynchronizedBookMark && !bookmark.getFeedLinkReference().getLinkAsText().equals(uriAsString)) {
+      if (!bookmark.getFeedLinkReference().getLinkAsText().equals(uriAsString)) {
 
         /* Check if this operation has the potential of deleting existing news */
         boolean containsNews = ModelUtils.countNews(bookmark) > 0;

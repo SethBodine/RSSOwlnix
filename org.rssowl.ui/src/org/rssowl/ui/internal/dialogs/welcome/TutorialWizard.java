@@ -26,7 +26,6 @@ package org.rssowl.ui.internal.dialogs.welcome;
 
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.ui.internal.dialogs.welcome.TutorialPage.Chapter;
 
 /**
@@ -62,8 +61,6 @@ public class TutorialWizard extends Wizard {
     addPage(new TutorialPage(Chapter.NOTIFIER));
     addPage(new TutorialPage(Chapter.SHARING));
     addPage(new TutorialPage(Chapter.IMPORT_EXPORT));
-    if (SyncUtils.ENABLED)
-      addPage(new TutorialPage(Chapter.SYNCHRONIZATION));
     addPage(new TutorialPage(Chapter.PREFERENCES));
     addPage(new TutorialPage(Chapter.TIPS));
     addPage(new TutorialPage(Chapter.FINISH));

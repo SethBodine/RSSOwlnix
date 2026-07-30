@@ -29,7 +29,6 @@ import org.rssowl.core.connection.ICredentials;
 import org.rssowl.core.connection.IProxyCredentials;
 import org.rssowl.core.connection.PlatformCredentialsProvider;
 import org.rssowl.core.tests.TestWebServer;
-import org.rssowl.core.util.SyncUtils;
 
 import java.net.URI;
 
@@ -62,25 +61,6 @@ public class MyCredentialsProvider extends PlatformCredentialsProvider {
         @Override
         public String getPassword() {
           return TestWebServer.password;
-        }
-
-        @Override
-        public String getDomain() {
-          return "";
-        }
-      };
-    }
-
-    if (SyncUtils.fromGoogle(link.toString())) {
-      return new ICredentials() {
-        @Override
-        public String getUsername() {
-          return "rssowl@mailinator.com";
-        }
-
-        @Override
-        public String getPassword() {
-          return "rssowl.org";
         }
 
         @Override

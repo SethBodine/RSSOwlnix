@@ -25,7 +25,6 @@
 package org.rssowl.core.interpreter;
 
 import org.jdom.Document;
-import org.rssowl.core.internal.interpreter.json.JSONObject;
 import org.rssowl.core.interpreter.ITypeExporter.Options;
 import org.rssowl.core.persist.IEntity;
 import org.rssowl.core.persist.IFeed;
@@ -95,15 +94,6 @@ public interface IInterpreterService {
    * @throws InterpreterException In case of an Error while Interpreting.
    */
   void interpretJDomDocument(Document document, IFeed feed) throws InterpreterException;
-
-  /**
-   * Interpret the given {@link JSONObject} as Feed.
-   *
-   * @param json The {@link JSONObject} to interpret as <code>IFeed</code>.
-   * @param feed An instance of <code>IFeed</code> that stores the interpretion.
-   * @throws InterpreterException In case of an Error while Interpreting.
-   */
-  void interpretJSONObject(JSONObject json, IFeed feed) throws InterpreterException;
 
   /**
    * Imports the given Document as OPML into Types and returns them.

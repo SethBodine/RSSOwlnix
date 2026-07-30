@@ -90,7 +90,6 @@ import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.Pair;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.OwlUI.Layout;
 import org.rssowl.ui.internal.actions.ArchiveNewsAction;
@@ -121,7 +120,6 @@ import org.rssowl.ui.internal.dialogs.preferences.ManageLabelsPreferencePage;
 import org.rssowl.ui.internal.dialogs.preferences.NotifierPreferencesPage;
 import org.rssowl.ui.internal.dialogs.preferences.OverviewPreferencesPage;
 import org.rssowl.ui.internal.dialogs.preferences.SharingPreferencesPage;
-import org.rssowl.ui.internal.dialogs.welcome.TutorialPage.Chapter;
 import org.rssowl.ui.internal.dialogs.welcome.TutorialWizard;
 import org.rssowl.ui.internal.editors.browser.WebBrowserContext;
 import org.rssowl.ui.internal.editors.feed.FeedView;
@@ -1399,17 +1397,6 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor {
         return TutorialHandler.ID;
       }
     });
-
-    /* Google Reader Synchronization */
-    if (SyncUtils.ENABLED) {
-      helpMenu.add(new Action(Messages.ApplicationActionBarAdvisor_GOOGLE_READER_SYNC) {
-        @Override
-        public void run() {
-          TutorialWizard wizard = new TutorialWizard(Chapter.SYNCHRONIZATION);
-          OwlUI.openWizard(getActionBarConfigurer().getWindowConfigurer().getWindow().getShell(), wizard, false, false, null);
-        }
-      });
-    }
 
     /* Link to Help */
     helpMenu.add(new Action(Messages.ApplicationActionBarAdvisor_FAQ) {

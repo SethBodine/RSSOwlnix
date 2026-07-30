@@ -35,16 +35,13 @@ import org.rssowl.core.persist.IPerson;
 import org.rssowl.core.persist.ISource;
 import org.rssowl.core.persist.reference.FeedLinkReference;
 import org.rssowl.core.persist.reference.NewsReference;
-import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.MergeUtils;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 
 import java.io.Serializable;
 import java.net.URI;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -1116,46 +1113,31 @@ public class News extends AbstractEntity implements INews {
     try {
       fLock.acquireWriteLock();
       try {
-        boolean isSynchronized = SyncUtils.isSynchronized(this);
         boolean wasModified = !MergeUtils.equals(fModifiedDate, n.fModifiedDate) || !MergeUtils.equals(fPublishDate, n.fPublishDate) || !MergeUtils.equals(fTitle, n.fTitle);
-
-        /*
-         * Optimization: Since synchronized feeds typically have hundreds of news every time the feed is loaded, we will only
-         * merge news if either modified or published date have changed or the articles title. This ensures to keep the computational
-         * overhead low while still supporting updates to articles that are marked as such.
-         */
-        boolean onlyMergeUserState = isSynchronized && !wasModified;
 
         /* Merge News User State */
         boolean updated = mergeState(news);
-        if (isVisible() && isSynchronized) {
-          updated |= mergeLabels(n);
-          updated |= (fIsFlagged != n.fIsFlagged);
-          fIsFlagged = n.fIsFlagged;
-        }
 
         /* Merge News Content */
         MergeResult newsMergeResult = new MergeResult();
         ComplexMergeResult<?> propertiesMergeResult = null;
-        if (!onlyMergeUserState) {
-          updated |= processListMergeResult(newsMergeResult, mergeAttachments(n.fAttachments));
-          updated |= processListMergeResult(newsMergeResult, mergeCategories(n.fCategories));
-          updated |= processListMergeResult(newsMergeResult, mergeAuthor(n.fAuthor));
-          updated |= mergeGuid(n.fGuid);
-          if (wasModified)
-            mergeDescription(newsMergeResult, n); //Optimization: We only merge in description if the news was modified and indicates this
-          updated |= processListMergeResult(newsMergeResult, mergeSource(n.fSource));
-          updated |= !simpleFieldsEqual(n);
-          fBaseUri = n.fBaseUri;
-          fComments = n.fComments;
-          fLinkText = n.fLinkText;
-          fModifiedDate = n.fModifiedDate;
-          fPublishDate = n.fPublishDate;
-          fTitle = n.fTitle;
-          fInReplyTo = n.fInReplyTo;
+        updated |= processListMergeResult(newsMergeResult, mergeAttachments(n.fAttachments));
+        updated |= processListMergeResult(newsMergeResult, mergeCategories(n.fCategories));
+        updated |= processListMergeResult(newsMergeResult, mergeAuthor(n.fAuthor));
+        updated |= mergeGuid(n.fGuid);
+        if (wasModified)
+          mergeDescription(newsMergeResult, n); //Optimization: We only merge in description if the news was modified and indicates this
+        updated |= processListMergeResult(newsMergeResult, mergeSource(n.fSource));
+        updated |= !simpleFieldsEqual(n);
+        fBaseUri = n.fBaseUri;
+        fComments = n.fComments;
+        fLinkText = n.fLinkText;
+        fModifiedDate = n.fModifiedDate;
+        fPublishDate = n.fPublishDate;
+        fTitle = n.fTitle;
+        fInReplyTo = n.fInReplyTo;
 
-          propertiesMergeResult = MergeUtils.mergeProperties(this, news);
-        }
+        propertiesMergeResult = MergeUtils.mergeProperties(this, news);
 
         /* Configure News Merge Result based on Merge Results */
         if (updated || (propertiesMergeResult != null && propertiesMergeResult.isStructuralChange())) {
@@ -1210,7 +1192,7 @@ public class News extends AbstractEntity implements INews {
 
   private boolean mergeState(INews news) {
     State thisState = getState();
-    State otherState = getState(news); //Considers special Sync State as needed
+    State otherState = getState(news);
     if (thisState != otherState && otherState != State.NEW) {
       setState(otherState);
       return true;
@@ -1225,14 +1207,6 @@ public class News extends AbstractEntity implements INews {
   }
 
   private State getState(INews news) {
-    if (isVisible() && SyncUtils.isSynchronized(news)) { //Avoid marking a deleted news as visible from a sync merge
-      if (news.getProperty(SyncUtils.GOOGLE_MARKED_READ) != null)
-        return State.READ;
-
-      if (news.getProperty(SyncUtils.GOOGLE_MARKED_UNREAD) != null)
-        return State.UNREAD;
-    }
-
     return news.getState();
   }
 
@@ -1240,9 +1214,6 @@ public class News extends AbstractEntity implements INews {
     State thisState = getState();
     if (thisState != State.READ && thisState != State.UNREAD)
       return false;
-
-    if (SyncUtils.isSynchronized(this))
-      return false; //Unsupported for synchronized news
 
     String title = news.getTitle();
     if (!(fTitle == null ? title == null : fTitle.equals(title)))
@@ -1316,37 +1287,6 @@ public class News extends AbstractEntity implements INews {
     ComplexMergeResult<List<IAttachment>> mergeResult = MergeUtils.merge(fAttachments, attachments, comparator, this);
     fAttachments = mergeResult.getMergedObject();
     return mergeResult;
-  }
-
-  private boolean mergeLabels(INews news) {
-
-    /* Sort the labels because we can not predict the order */
-    Set<ILabel> thisLabels = CoreUtils.getSortedLabels(this);
-    Set<ILabel> otherLabels = CoreUtils.getSortedLabels(news);
-
-    /* Identical Equals */
-    if (Arrays.equals(thisLabels.toArray(), otherLabels.toArray()))
-      return false;
-
-    /* Remove All Labels */
-    if (otherLabels.isEmpty()) {
-      clearLabels();
-      return true;
-    }
-
-    /* Add Specific Labels */
-    for (ILabel otherLabel : otherLabels) {
-      if (!thisLabels.contains(otherLabel))
-        addLabel(otherLabel);
-    }
-
-    /* Remove Specific Labels */
-    for (ILabel thisLabel : thisLabels) {
-      if (!otherLabels.contains(thisLabel))
-        removeLabel(thisLabel);
-    }
-
-    return true;
   }
 
   /*

@@ -60,15 +60,6 @@ public interface IConnectionPropertyConstants {
   /** Key for forcing a POST */
   public static final String POST = "POST"; //$NON-NLS-1$
 
-  /** Key for number of items to receive */
-  public static final String ITEM_LIMIT = "ITEM_LIMIT"; //$NON-NLS-1$
-
-  /** Key for a specific date from where to receive items */
-  public static final String DATE_LIMIT = "DATE_LIMIT"; //$NON-NLS-1$
-
-  /** Map of Uncommitted Items for Synchronized Feeds */
-  public static final String UNCOMMITTED_ITEMS = "UNCOMMITTED_ITEMS"; //$NON-NLS-1$
-
   /**
    * Key for storing an instance of <code>IProgressMonitor</code> to support
    * early cancelation while a Stream is read from the Connection. See

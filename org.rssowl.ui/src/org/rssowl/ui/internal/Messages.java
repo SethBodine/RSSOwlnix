@@ -59,7 +59,6 @@ public class Messages extends NLS {
   public static String ApplicationActionBarAdvisor_FILTER_NEWS;
   public static String ApplicationActionBarAdvisor_FULL_SCREEN;
   public static String ApplicationActionBarAdvisor_GO;
-  public static String ApplicationActionBarAdvisor_GOOGLE_READER_SYNC;
   public static String ApplicationActionBarAdvisor_GROUP_NEWS;
   public static String ApplicationActionBarAdvisor_HEADLINES_LAYOUT;
   public static String ApplicationActionBarAdvisor_HELP;
@@ -221,8 +220,6 @@ public class Messages extends NLS {
   public static String OwlUI_SECOND;
   public static String OwlUI_SECONDS;
   public static String OwlUI_SIZE_FORMAT;
-  public static String OwlUI_SYNC_LOGIN;
-  public static String OwlUI_SYNC_LOGIN_TEXT;
   public static String OwlUI_TITLE;
   public static String OwlUI_UPDATED;
   public static String OwlUI_VERTICAL_LAYOUT;

@@ -274,9 +274,6 @@ public class DefaultPreferences {
   /** Global: Clean Up: Delete BMs with a connection error */
   public static final String CLEAN_UP_BM_BY_CON_ERROR = Preference.CLEAN_UP_BM_BY_CON_ERROR.id();
 
-  /** Global: Clean Up: Delete BMs no longer subscribed to in Google Reader */
-  public static final String CLEAN_UP_BM_BY_SYNCHRONIZATION = Preference.CLEAN_UP_BM_BY_SYNCHRONIZATION.id();
-
   /** Global: Clean Up: Delete duplicate BMs */
   public static final String CLEAN_UP_BM_BY_DUPLICATES = Preference.CLEAN_UP_BM_BY_DUPLICATES.id();
 

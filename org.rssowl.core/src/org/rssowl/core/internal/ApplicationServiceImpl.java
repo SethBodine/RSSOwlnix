@@ -69,7 +69,6 @@ import org.rssowl.core.persist.IEntity;
 import org.rssowl.core.persist.IFeed;
 import org.rssowl.core.persist.IFilterAction;
 import org.rssowl.core.persist.IGuid;
-import org.rssowl.core.persist.ILabel;
 import org.rssowl.core.persist.INews;
 import org.rssowl.core.persist.ISearch;
 import org.rssowl.core.persist.ISearchCondition;
@@ -86,7 +85,6 @@ import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.DateUtils;
 import org.rssowl.core.util.LoggingSafeRunnable;
 import org.rssowl.core.util.RetentionStrategy;
-import org.rssowl.core.util.SyncUtils;
 
 import com.db4o.ObjectContainer;
 import com.db4o.ext.Db4oException;
@@ -100,7 +98,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -195,109 +192,9 @@ public class ApplicationServiceImpl implements IApplicationService {
       if (monitor.isCanceled() || Owl.isShuttingDown())
         return;
 
-      /* Create labels as necessary from Sync and assign to news */
-      boolean isSynced = SyncUtils.isSynchronized(bookMark);
-      if (isSynced) {
-
-        /* Determine those Labels the user has explicitly deleted and ignore */
-        String[] labelsToIgnore = Owl.getPreferenceService().getGlobalScope().getStrings(DefaultPreferences.DELETED_LABELS);
-        List<String> labelsToIgnoreList = (labelsToIgnore != null) ? new ArrayList<>(labelsToIgnore.length) : Collections.<String> emptyList();
-        if (labelsToIgnore != null) {
-          for (String label : labelsToIgnore) {
-            labelsToIgnoreList.add(label);
-          }
-        }
-
-        /* Collect All Incoming Labels */
-        boolean hasLabels = false;
-        Set<String> incomingLabels = new HashSet<>();
-        for (INews item : interpretedFeed.getNews()) {
-          Object labelsObj = item.getProperty(SyncUtils.GOOGLE_LABELS);
-          if (labelsObj != null && labelsObj instanceof String[]) {
-            String[] labels = (String[]) labelsObj;
-            for (String label : labels) {
-              if (!labelsToIgnoreList.contains(label))
-                incomingLabels.add(label);
-            }
-            hasLabels = true;
-          }
-        }
-
-        /* Determine the New Labels to Create */
-        if (!incomingLabels.isEmpty()) {
-
-          /* Existing Labels */
-          Collection<ILabel> existingLabels = OwlDAO.loadAll(ILabel.class);
-          Map<String, ILabel> mapNameToLabel = new HashMap<>();
-          for (ILabel label : existingLabels) {
-            mapNameToLabel.put(label.getName(), label);
-          }
-
-          /* New Labels to Create */
-          Set<ILabel> labelsToCreate = new HashSet<>();
-          for (String incomingLabel : incomingLabels) {
-            if (!mapNameToLabel.containsKey(incomingLabel)) {
-              ILabel newLabel = Owl.getModelFactory().createLabel(null, incomingLabel);
-              newLabel.setColor("0,0,0"); //$NON-NLS-1$
-              newLabel.setOrder(mapNameToLabel.size());
-              mapNameToLabel.put(incomingLabel, newLabel);
-
-              labelsToCreate.add(newLabel);
-            }
-          }
-
-          /* Save new Labels */
-          if (!labelsToCreate.isEmpty())
-            OwlDAO.saveAll(labelsToCreate);
-
-          /* Assign Labels to News */
-          for (INews item : interpretedFeed.getNews()) {
-            Object labelsObj = item.getProperty(SyncUtils.GOOGLE_LABELS);
-            if (labelsObj != null && labelsObj instanceof String[]) {
-              String[] labels = (String[]) labelsObj;
-              for (String labelName : labels) {
-                ILabel label = mapNameToLabel.get(labelName);
-                if (label != null)
-                  item.addLabel(label);
-              }
-            }
-            item.removeProperty(SyncUtils.GOOGLE_LABELS);
-          }
-        }
-
-        /* Otherwise make sure to clean up properties for Labels */
-        else if (hasLabels) {
-          for (INews item : interpretedFeed.getNews()) {
-            item.removeProperty(SyncUtils.GOOGLE_LABELS);
-          }
-        }
-
-        /* Return early on cancellation */
-        if (monitor.isCanceled() || Owl.isShuttingDown())
-          return;
-      }
-
       /* Merge with existing */
       mergeResult = feed.mergeAndCleanUp(interpretedFeed);
       final List<INews> newNewsAdded = getNewNewsAdded(feed);
-
-      /* Now adjust News State based on Sync */
-      if (isSynced) {
-        for (INews item : newNewsAdded) {
-
-          /* News Marked Read */
-          if (item.getProperty(SyncUtils.GOOGLE_MARKED_READ) != null) {
-            item.setState(INews.State.READ);
-            item.removeProperty(SyncUtils.GOOGLE_MARKED_READ);
-          }
-
-          /* News Marked Unread */
-          else if (item.getProperty(SyncUtils.GOOGLE_MARKED_UNREAD) != null) {
-            item.setState(INews.State.UNREAD);
-            item.removeProperty(SyncUtils.GOOGLE_MARKED_UNREAD);
-          }
-        }
-      }
 
       /* Return early on cancellation */
       if (monitor.isCanceled() || Owl.isShuttingDown())
@@ -685,9 +582,6 @@ public class ApplicationServiceImpl implements IApplicationService {
     List<URI> links = new ArrayList<>();
     List<IGuid> guids = new ArrayList<>();
     for (INews item : news) {
-      if (SyncUtils.isSynchronized(item))
-        continue; //Not offering state sync from duplicates for synced news items
-
       if (item.getGuid() != null)
         guids.add(item.getGuid());
       else if (item.getLink() != null)

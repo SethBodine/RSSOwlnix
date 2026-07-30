@@ -24,17 +24,11 @@
 
 package org.rssowl.ui.internal.dialogs.cleanup;
 
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.osgi.util.NLS;
 import org.rssowl.core.Owl;
-import org.rssowl.core.connection.IAbortable;
-import org.rssowl.core.connection.IConnectionPropertyConstants;
-import org.rssowl.core.connection.ICredentials;
-import org.rssowl.core.connection.IProtocolHandler;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.persist.IBookMark;
-import org.rssowl.core.persist.IEntity;
 import org.rssowl.core.persist.IFolder;
 import org.rssowl.core.persist.ILabel;
 import org.rssowl.core.persist.IModelFactory;
@@ -53,13 +47,9 @@ import org.rssowl.core.persist.service.IModelSearch;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.DateUtils;
 import org.rssowl.core.util.SearchHit;
-import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.Activator;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -303,28 +293,6 @@ public class CleanUpModel {
         fTasks.add(group);
     }
 
-    /* 5.) Delete BookMarks no longer subscribed to in Google Reader */
-    if (fOps.deleteFeedsBySynchronization()) {
-      CleanUpGroup group = new CleanUpGroup(Messages.CleanUpModel_DELETE_UNSUBSCRIBED_FEEDS);
-      Set<String> googleReaderFeeds = loadGoogleReaderFeeds(monitor);
-
-      if (googleReaderFeeds != null) {
-        for (IBookMark mark : fBookmarks) {
-          if (bookmarksToDelete.contains(mark) || !SyncUtils.isSynchronized(mark))
-            continue;
-
-          String feedLink = URIUtils.toHTTP(mark.getFeedLinkReference().getLinkAsText());
-          if (!googleReaderFeeds.contains(feedLink)) {
-            bookmarksToDelete.add(mark);
-            group.addTask(new BookMarkTask(group, mark));
-          }
-        }
-      }
-
-      if (!group.isEmpty())
-        fTasks.add(group);
-    }
-
     /* Return if user cancelled the preview */
     if (monitor.isCanceled())
       return;
@@ -539,80 +507,6 @@ public class CleanUpModel {
       if (!group.isEmpty() && !monitor.isCanceled())
         fTasks.add(group);
     }
-  }
-
-  private Set<String> loadGoogleReaderFeeds(IProgressMonitor monitor) {
-    InputStream inS = null;
-    boolean isCanceled = false;
-    try {
-
-      /* Obtain Google Credentials */
-      ICredentials credentials = Owl.getConnectionService().getAuthCredentials(URI.create(SyncUtils.GOOGLE_LOGIN_URL), null);
-      if (credentials == null)
-        return null;
-
-      /* Load Google Auth Token */
-      String authToken = SyncUtils.getGoogleAuthToken(credentials.getUsername(), credentials.getPassword(), false, monitor);
-      if (authToken == null)
-        authToken = SyncUtils.getGoogleAuthToken(credentials.getUsername(), credentials.getPassword(), true, monitor);
-
-      /* Return on Cancellation */
-      if (monitor.isCanceled() || !StringUtils.isSet(authToken))
-        return null;
-
-      /* Import from Google */
-      URI opmlImportUri = URI.create(SyncUtils.GOOGLE_READER_OPML_URI);
-      IProtocolHandler handler = Owl.getConnectionService().getHandler(opmlImportUri);
-
-      Map<Object, Object> properties = new HashMap<>();
-      Map<String, String> headers = new HashMap<>();
-      headers.put("Authorization", SyncUtils.getGoogleAuthorizationHeader(authToken)); //$NON-NLS-1$
-      properties.put(IConnectionPropertyConstants.HEADERS, headers);
-
-      inS = handler.openStream(opmlImportUri, monitor, properties);
-
-      /* Return on Cancellation */
-      if (monitor.isCanceled()) {
-        isCanceled = true;
-        return null;
-      }
-
-      /* Find Bookmarks */
-      List<IEntity> types = Owl.getInterpreter().importFrom(inS);
-      Set<IBookMark> bookmarks = new HashSet<>();
-      for (IEntity type : types) {
-        if (type instanceof IBookMark)
-          bookmarks.add((IBookMark) type);
-        else if (type instanceof IFolder)
-          CoreUtils.fillBookMarks(bookmarks, Collections.singleton((IFolder) type));
-      }
-
-      Set<String> feeds = new HashSet<>();
-      for (IBookMark bookmark : bookmarks) {
-        feeds.add(bookmark.getFeedLinkReference().getLinkAsText());
-      }
-
-      feeds.add(URIUtils.toHTTP(SyncUtils.GOOGLE_READER_NOTES_FEED));
-      feeds.add(URIUtils.toHTTP(SyncUtils.GOOGLE_READER_SHARED_ITEMS_FEED));
-      feeds.add(URIUtils.toHTTP(SyncUtils.GOOGLE_READER_RECOMMENDED_ITEMS_FEED));
-
-      return feeds;
-    } catch (CoreException e) {
-      Activator.getDefault().logError(e.getMessage(), e);
-    } finally {
-      if (inS != null) {
-        try {
-          if ((isCanceled && inS instanceof IAbortable))
-            ((IAbortable) inS).abort();
-          else
-            inS.close();
-        } catch (IOException e) {
-          Activator.getDefault().logError(e.getMessage(), e);
-        }
-      }
-    }
-
-    return null;
   }
 
   /* Have to test if Entity really exists (bug 337) */

@@ -53,7 +53,6 @@ import org.rssowl.core.persist.dao.IPersonDAO;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.util.Pair;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.OwlUI;
 import org.rssowl.ui.internal.dialogs.welcome.WelcomeWizard;
@@ -84,7 +83,6 @@ public class ImportSourcePage extends WizardPage {
   private Button fBrowseFileButton;
   private Button fImportFromKeywordRadio;
   private Combo fKeywordInput;
-  private Button fImportGoogleReaderRadio;
   private Button fImportFromRecommendedRadio;
   private Button fImportNoneRadio;
   private IPreferenceScope fPreferences;
@@ -106,10 +104,7 @@ public class ImportSourcePage extends WizardPage {
     KEYWORD,
 
     /** User wants to import from recommended */
-    RECOMMENDED,
-
-    /** User wants to import from Google Reader */
-    GOOGLE
+    RECOMMENDED
   }
 
   ImportSourcePage(String fileOrWebsite, boolean isKewordSearch) {
@@ -125,9 +120,6 @@ public class ImportSourcePage extends WizardPage {
   public Source getSource() {
     if (fImportFromResourceRadio.getSelection())
       return Source.RESOURCE;
-
-    if (SyncUtils.ENABLED && fImportGoogleReaderRadio.getSelection())
-      return Source.GOOGLE;
 
     if (fImportFromKeywordRadio.getSelection())
       return Source.KEYWORD;
@@ -152,9 +144,6 @@ public class ImportSourcePage extends WizardPage {
   boolean isRemoteSource() {
     Source source = getSource();
     if (source == Source.KEYWORD)
-      return true;
-
-    if (source == Source.GOOGLE)
       return true;
 
     if (source == Source.RESOURCE) {
@@ -198,11 +187,6 @@ public class ImportSourcePage extends WizardPage {
       /* Import from Recommended Feeds */
       createImportRecommendedControls(container);
 
-      /* Import from Google Reader */
-      if (SyncUtils.ENABLED) {
-        createImportGoogleReaderControls(container);
-      }
-
       /* Import from File or Website */
       createImportResourceControls(container);
 
@@ -221,11 +205,6 @@ public class ImportSourcePage extends WizardPage {
 
       /* Import from Keyword Search */
       createImportKeywordControls(container);
-
-      /* Import from Google Reader */
-      if (SyncUtils.ENABLED) {
-        createImportGoogleReaderControls(container);
-      }
 
       /* Import from Recommended Feeds */
       createImportRecommendedControls(container);
@@ -378,20 +357,6 @@ public class ImportSourcePage extends WizardPage {
       fLocalizedFeedSearch.setText(Messages.ImportSourcePage_MATCH_LANGUAGE);
   }
 
-  private void createImportGoogleReaderControls(Composite container) {
-    fImportGoogleReaderRadio = new Button(container, SWT.RADIO);
-    fImportGoogleReaderRadio.setText(Messages.ImportSourcePage_IMPORT_GOOGLE_READER);
-    fImportGoogleReaderRadio.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
-    if (isWelcome())
-      ((GridData) fImportGoogleReaderRadio.getLayoutData()).verticalIndent = 10;
-    fImportGoogleReaderRadio.addSelectionListener(new SelectionAdapter() {
-      @Override
-      public void widgetSelected(SelectionEvent e) {
-        updatePageComplete();
-      }
-    });
-  }
-
   private void createImportRecommendedControls(Composite container) {
     fImportFromRecommendedRadio = new Button(container, SWT.RADIO);
     fImportFromRecommendedRadio.setText(Messages.ImportSourcePage_IMPORT_RECOMMENDED);
@@ -456,12 +421,8 @@ public class ImportSourcePage extends WizardPage {
     if (fImportFromRecommendedRadio.getSelection())
       setPageComplete(true);
 
-    /* Import Google Reader */
-    if (SyncUtils.ENABLED && fImportGoogleReaderRadio.getSelection())
-      setPageComplete(true);
-
     /* Import None */
-    else if (fImportNoneRadio != null && fImportNoneRadio.getSelection())
+    if (fImportNoneRadio != null && fImportNoneRadio.getSelection())
       setPageComplete(true);
 
     /* Import from Resource */

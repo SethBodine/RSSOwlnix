@@ -64,7 +64,6 @@ import org.rssowl.core.persist.reference.FeedLinkReference;
 import org.rssowl.core.tests.TestWebServer;
 import org.rssowl.core.util.RegExUtils;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.Triple;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.Controller;
@@ -690,53 +689,6 @@ public class ConnectionTests {
     List<String> links = RegExUtils.extractLinksFromText(content, false);
     assertTrue(!links.isEmpty());
     assertTrue(links.size() >= 3); //must find the 3 absolute links (with http: or https:)
-  }
-
-  /**
-   * @throws Exception
-   * @deprecated TODO google reader was discontinued, find google reader
-   * replacement
-   */
-  @Deprecated
-  @Test
-  @Ignore
-  public void testGoogleReaderSync() throws Exception {
-    String authToken = SyncUtils.getGoogleAuthToken("rssowl@mailinator.com", "rssowl.org", true, new NullProgressMonitor());
-    assertNotNull(authToken);
-
-    assertEquals(authToken, SyncUtils.getGoogleAuthToken("rssowl@mailinator.com", "rssowl.org", false, new NullProgressMonitor()));
-
-    String newAuthToken = SyncUtils.getGoogleAuthToken("rssowl@mailinator.com", "rssowl.org", true, new NullProgressMonitor());
-    assertFalse(authToken.equals(newAuthToken));
-
-    authToken = newAuthToken;
-
-    URI uri = URI.create(SyncUtils.GOOGLE_READER_OPML_URI);
-    IProtocolHandler handler = Owl.getConnectionService().getHandler(uri);
-
-    Map<Object, Object> properties = new HashMap<>();
-
-    Map<String, String> headers = new HashMap<>();
-    headers.put("Authorization", SyncUtils.getGoogleAuthorizationHeader(authToken)); //$NON-NLS-1$
-    properties.put(IConnectionPropertyConstants.HEADERS, headers);
-
-    InputStream inS = handler.openStream(uri, new NullProgressMonitor(), properties);
-
-    List<? extends IEntity> elements = Owl.getInterpreter().importFrom(inS);
-    assertTrue(!elements.isEmpty());
-  }
-
-  /**
-   * @throws Exception
-   * @deprecated TODO google reader was discontinued, find google reader
-   * replacement
-   */
-  @Deprecated
-  @Test
-  @Ignore
-  public void testGetGoogleReaderAPIToken() throws Exception {
-    String apiToken = SyncUtils.getGoogleApiToken("rssowl@mailinator.com", "rssowl.org", new NullProgressMonitor());
-    assertNotNull(apiToken);
   }
 
   /**

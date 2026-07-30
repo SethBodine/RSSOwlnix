@@ -41,7 +41,6 @@ import org.eclipse.swt.widgets.Spinner;
 import org.rssowl.core.Owl;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.persist.pref.IPreferenceScope;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.ui.internal.OwlUI;
 import org.rssowl.ui.internal.util.LayoutUtils;
 
@@ -50,7 +49,6 @@ import org.rssowl.ui.internal.util.LayoutUtils;
  */
 public class CleanUpOptionsPage extends WizardPage {
   private Button fDeleteFeedByLastVisitCheck;
-  private Button fDeleteFeedBySynchronizationCheck;
   private Spinner fMaxLastVisitSpinner;
   private Button fDeleteFeedByLastUpdateCheck;
   private Spinner fMaxLastUpdateSpinner;
@@ -87,7 +85,6 @@ public class CleanUpOptionsPage extends WizardPage {
     int lastUpdateInDays = fMaxLastUpdateSpinner.getSelection();
     boolean deleteFeedsByConError = fDeleteConErrorFeedCheck.getSelection();
     boolean deleteFeedsByDuplicates = fDeleteDuplicateBookmarksCheck.getSelection();
-    boolean deleteFeedsBySynchronization = (fDeleteFeedBySynchronizationCheck != null) ? fDeleteFeedBySynchronizationCheck.getSelection() : false;
 
     /* News Operations */
     boolean maxNewsCountPerFeedState = fDeleteNewsByCountCheck.getSelection();
@@ -100,7 +97,7 @@ public class CleanUpOptionsPage extends WizardPage {
     boolean keepUnreadNews = fNeverDeleteUnreadNewsCheck.getSelection();
     boolean keepLabeledNews = fNeverDeleteLabeledNewsCheck.getSelection();
 
-    return new CleanUpOperations(lastVisitInDaysState, lastVisitInDays, lastUpdateInDaysState, lastUpdateInDays, deleteFeedsByConError, deleteFeedsByDuplicates, deleteFeedsBySynchronization, maxNewsCountPerFeedState, maxNewsCountPerFeed, maxNewsAgeState, maxNewsAge, deleteReadNews, keepUnreadNews, keepLabeledNews);
+    return new CleanUpOperations(lastVisitInDaysState, lastVisitInDays, lastUpdateInDaysState, lastUpdateInDays, deleteFeedsByConError, deleteFeedsByDuplicates, maxNewsCountPerFeedState, maxNewsCountPerFeed, maxNewsAgeState, maxNewsAge, deleteReadNews, keepUnreadNews, keepLabeledNews);
   }
 
   /*
@@ -192,13 +189,6 @@ public class CleanUpOptionsPage extends WizardPage {
       fDeleteConErrorFeedCheck.setSelection(fGlobalScope.getBoolean(DefaultPreferences.CLEAN_UP_BM_BY_CON_ERROR));
     }
 
-    /* 5.) Delete Feeds that are no longer used in Google Reader */
-    if (SyncUtils.ENABLED && SyncUtils.hasSyncCredentials()){
-      fDeleteFeedBySynchronizationCheck = new Button(container, SWT.CHECK);
-      fDeleteFeedBySynchronizationCheck.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 3, 1));
-      fDeleteFeedBySynchronizationCheck.setText(Messages.CleanUpOptionsPage_DELETE_UNSUBSCRIBED_FEEDS);
-      fDeleteFeedBySynchronizationCheck.setSelection(fGlobalScope.getBoolean(DefaultPreferences.CLEAN_UP_BM_BY_SYNCHRONIZATION));
-    }
   }
 
   private void createNewsOptions(Composite parent) {

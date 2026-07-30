@@ -35,12 +35,10 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.rssowl.core.Owl;
@@ -50,7 +48,6 @@ import org.rssowl.core.connection.ICredentialsProvider;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.Activator;
 import org.rssowl.ui.internal.OwlUI;
@@ -83,7 +80,6 @@ public class LoginDialog extends TitleAreaDialog {
   private String fSubline;
   private ImageDescriptor fTitleImageDescriptor;
   private final IPreferenceScope fPreferences;
-  private final boolean fIsSyncLogin;
 
   /**
    * @param parentShell
@@ -91,20 +87,9 @@ public class LoginDialog extends TitleAreaDialog {
    * @param realm
    */
   public LoginDialog(Shell parentShell, URI link, String realm) {
-    this(parentShell, link, realm, false);
-  }
-
-  /**
-   * @param parentShell
-   * @param link
-   * @param realm
-   * @param isSyncLogin
-   */
-  public LoginDialog(Shell parentShell, URI link, String realm, boolean isSyncLogin) {
     super(parentShell);
     fLink = link;
     fRealm = realm;
-    fIsSyncLogin = isSyncLogin;
     fResources = new LocalResourceManager(JFaceResources.getResources());
     fCredProvider = Owl.getConnectionService().getCredentialsProvider(link);
     fPreferences = Owl.getPreferenceService().getGlobalScope();
@@ -148,7 +133,7 @@ public class LoginDialog extends TitleAreaDialog {
 
     /* User pressed OK Button */
     if (buttonId == IDialogConstants.OK_ID) {
-      boolean rememberPassword = fIsSyncLogin || fRememberPassword.getSelection();
+      boolean rememberPassword = fRememberPassword.getSelection();
       if (rememberPassword != fPreferences.getBoolean(DefaultPreferences.REMEMBER_PASSWORD))
         fPreferences.putBoolean(DefaultPreferences.REMEMBER_PASSWORD, rememberPassword);
 
@@ -275,16 +260,14 @@ public class LoginDialog extends TitleAreaDialog {
     fPassword.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
     /* Spacer */
-    if (!fIsSyncLogin) {
-      new Label(composite, SWT.NONE);
+    new Label(composite, SWT.NONE);
 
-      /* Remember Password */
-      fRememberPassword = new Button(composite, SWT.CHECK);
-      fRememberPassword.setText(Messages.LoginDialog_REMEMBER_PASSWORD);
-      fRememberPassword.setSelection(fPreferences.getBoolean(DefaultPreferences.REMEMBER_PASSWORD));
-      fRememberPassword.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
-      ((GridData) fRememberPassword.getLayoutData()).verticalIndent = 5;
-    }
+    /* Remember Password */
+    fRememberPassword = new Button(composite, SWT.CHECK);
+    fRememberPassword.setText(Messages.LoginDialog_REMEMBER_PASSWORD);
+    fRememberPassword.setSelection(fPreferences.getBoolean(DefaultPreferences.REMEMBER_PASSWORD));
+    fRememberPassword.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+    ((GridData) fRememberPassword.getLayoutData()).verticalIndent = 5;
 
     /* Separator */
     Label separator = new Label(parent, SWT.SEPARATOR | SWT.HORIZONTAL);
@@ -303,40 +286,6 @@ public class LoginDialog extends TitleAreaDialog {
    */
   @Override
   protected Control createButtonBar(Composite parent) {
-
-    /* Inject Link if showing Sync Login */
-    if (fIsSyncLogin) {
-      Composite composite = new Composite(parent, SWT.NONE);
-      GridLayout layout = new GridLayout(2, false);
-      layout.marginLeft = 5;
-      layout.marginWidth = 0;
-      layout.marginHeight = 0;
-      layout.horizontalSpacing = 0;
-      composite.setLayout(layout);
-      composite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false));
-      composite.setFont(parent.getFont());
-      if (isHelpAvailable()) {
-        Control helpControl = createHelpControl(composite);
-        ((GridData) helpControl.getLayoutData()).horizontalIndent = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
-      }
-
-      Link createAccountLink = new Link(composite, SWT.None);
-      createAccountLink.setText(Messages.LoginDialog_CREATE_NEW_ACCOUNT);
-      createAccountLink.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, true));
-      createAccountLink.addSelectionListener(new SelectionAdapter() {
-        @Override
-        public void widgetSelected(SelectionEvent e) {
-          BrowserUtils.openLinkExternal(SyncUtils.GOOGLE_NEW_ACCOUNT_URL);
-        }
-      });
-
-      Control buttonSection = super.createButtonBar(composite);
-      ((GridData) buttonSection.getLayoutData()).grabExcessHorizontalSpace = true;
-
-      return composite;
-    }
-
-    /* Otherwise return super */
     return super.createButtonBar(parent);
   }
 

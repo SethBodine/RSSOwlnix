@@ -57,7 +57,6 @@ import org.rssowl.core.connection.CredentialsException;
 import org.rssowl.core.connection.IConnectionPropertyConstants;
 import org.rssowl.core.connection.MonitorCanceledException;
 import org.rssowl.core.connection.NotModifiedException;
-import org.rssowl.core.connection.SyncConnectionException;
 import org.rssowl.core.connection.UnknownProtocolException;
 import org.rssowl.core.internal.InternalOwl;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
@@ -95,7 +94,6 @@ import org.rssowl.core.util.ITask;
 import org.rssowl.core.util.JobQueue;
 import org.rssowl.core.util.LoggingSafeRunnable;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.TaskAdapter;
 import org.rssowl.core.util.Triple;
 import org.rssowl.core.util.URIUtils;
@@ -115,11 +113,9 @@ import org.rssowl.ui.internal.services.ContextService;
 import org.rssowl.ui.internal.services.DownloadService;
 import org.rssowl.ui.internal.services.FeedReloadService;
 import org.rssowl.ui.internal.services.SavedSearchService;
-import org.rssowl.ui.internal.services.SyncService;
 import org.rssowl.ui.internal.util.ImportUtils;
 import org.rssowl.ui.internal.util.JobRunner;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -136,7 +132,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -230,9 +225,6 @@ public class Controller {
   /* Feed-Reload Service */
   private FeedReloadService fFeedReloadService;
 
-  /* Synchronization Service */
-  private SyncService fSyncService;
-
   /* Contributed Entity-Property-Pages */
   final List<EntityPropertyPageWrapper> fEntityPropertyPages;
 
@@ -277,7 +269,6 @@ public class Controller {
   private final ILabelDAO fLabelDao;
   private final IModelFactory fFactory;
   private final Lock fLoginDialogLock = new ReentrantLock();
-  private final AtomicLong fLastGoogleLoginCancel = new AtomicLong(0);
   private BookMarkAdapter fBookMarkListener;
   private LabelListener fLabelListener;
   private ListenerList<BookMarkLoadListener> fBookMarkLoadListeners = new ListenerList<>();
@@ -649,13 +640,6 @@ public class Controller {
   }
 
   /**
-   * @return Returns the synchronization service.
-   */
-  public SyncService getSyncService() {
-    return fSyncService;
-  }
-
-  /**
    * @return Returns the contextService.
    */
   public ContextService getContextService() {
@@ -774,35 +758,6 @@ public class Controller {
         properties = new HashMap<>();
       properties.put(IConnectionPropertyConstants.CON_TIMEOUT, fConnectionTimeout);
 
-      /* Sync Specific Item Limit derived from retention settings */
-      if (SyncUtils.isSynchronized(bookmark)) {
-        IPreferenceScope defaultPreferences = Owl.getPreferenceService().getDefaultScope();
-        IPreferenceScope preferences = Owl.getPreferenceService().getEntityScope(bookmark);
-
-        /* Item Limit */
-        int itemLimit;
-        if (preferences.getBoolean(DefaultPreferences.DEL_NEWS_BY_COUNT_STATE))
-          itemLimit = preferences.getInteger(DefaultPreferences.DEL_NEWS_BY_COUNT_VALUE);
-        else
-          itemLimit = defaultPreferences.getInteger(DefaultPreferences.DEL_NEWS_BY_COUNT_VALUE);
-
-        properties.put(IConnectionPropertyConstants.ITEM_LIMIT, itemLimit);
-
-        /* Date Limit */
-        long dateLimit = 0;
-        if (preferences.getBoolean(DefaultPreferences.DEL_NEWS_BY_AGE_STATE)) {
-          int days = preferences.getInteger(DefaultPreferences.DEL_NEWS_BY_AGE_VALUE);
-          dateLimit = DateUtils.getToday().getTimeInMillis() - (days * DateUtils.DAY);
-        }
-
-        if (dateLimit != 0)
-          properties.put(IConnectionPropertyConstants.DATE_LIMIT, dateLimit);
-
-        /* Uncommitted Synchronized Items */
-        if (fSyncService != null)
-          properties.put(IConnectionPropertyConstants.UNCOMMITTED_ITEMS, fSyncService.getUncommittedItems());
-      }
-
       /* Add Conditional GET Headers if present */
       if (conditionalGet != null) {
         String ifModifiedSince = conditionalGet.getIfModifiedSince();
@@ -902,33 +857,14 @@ public class Controller {
 
         /* Only one Login Dialog at the same time */
         if (shellAr[0] != null && !shellAr[0].isDisposed()) {
-          final boolean isSynchronizedFeed = SyncUtils.isSynchronized(bookmark);
           final AuthenticationRequiredException authEx = (AuthenticationRequiredException) e;
 
-          /* Normal Feed: acquire lock unconditionally, release in finally */
-          if (!isSynchronizedFeed) {
-            fLoginDialogLock.lock();
-            try {
-              openLoginDialogInternal(shellAr[0], monitor, bookmark, feedLink, authEx, isSynchronizedFeed);
-              return Status.OK_STATUS;
-            } finally {
-              fLoginDialogLock.unlock();
-            }
-          }
-
-          /* Synchronized Feed: only open dialog if we win the tryLock race */
-          else if (fLoginDialogLock.tryLock()) {
-            try {
-              openLoginDialogInternal(shellAr[0], monitor, bookmark, feedLink, authEx, isSynchronizedFeed);
-              return Status.OK_STATUS;
-            } finally {
-              fLoginDialogLock.unlock();
-            }
-          }
-
-          /* Update error flag for other synchronized feeds not loading */
-          else if (shouldProceedReloading(monitor, bookmark) && !bookmark.isErrorLoading()) {
-            updateErrorLoading(bookmark, authEx);
+          fLoginDialogLock.lock();
+          try {
+            openLoginDialogInternal(shellAr[0], monitor, bookmark, feedLink, authEx);
+            return Status.OK_STATUS;
+          } finally {
+            fLoginDialogLock.unlock();
           }
         }
       }
@@ -968,7 +904,7 @@ public class Controller {
    */
   private void openLoginDialogInternal(final Shell shell, final IProgressMonitor monitor,
       final IBookMark bookmark, final URI feedLink,
-      final AuthenticationRequiredException authEx, final boolean isSynchronizedFeed) {
+      final AuthenticationRequiredException authEx) {
     JobRunner.runSyncedInUIThread(shell, new Runnable() {
       @Override
       public void run() {
@@ -978,28 +914,18 @@ public class Controller {
           return;
 
         /* Credentials might have been provided meanwhile in another dialog */
-        if (!isSynchronizedFeed) {
-          try {
-            URI normalizedUri = URIUtils.normalizeUri(feedLink, true);
-            if (Owl.getConnectionService().getAuthCredentials(normalizedUri, authEx.getRealm()) != null) {
-              reloadQueued(bookmark, null, shell);
-              return;
-            }
-          } catch (CredentialsException exe) {
-            Activator.getDefault().getLog().log(exe.getStatus());
+        try {
+          URI normalizedUri = URIUtils.normalizeUri(feedLink, true);
+          if (Owl.getConnectionService().getAuthCredentials(normalizedUri, authEx.getRealm()) != null) {
+            reloadQueued(bookmark, null, shell);
+            return;
           }
+        } catch (CredentialsException exe) {
+          Activator.getDefault().getLog().log(exe.getStatus());
         }
 
         /* Show Login Dialog */
-        int status = -1;
-        if (isSynchronizedFeed)
-          status = OwlUI.openSyncLogin(shell);
-        else
-          status = new LoginDialog(shell, feedLink, authEx.getRealm()).open();
-
-        /* Remember time when user hit cancel from a Google Reader login challenge */
-        if (status == Window.CANCEL && isSynchronizedFeed)
-          fLastGoogleLoginCancel.set(System.currentTimeMillis());
+        int status = new LoginDialog(shell, feedLink, authEx.getRealm()).open();
 
         /* Trigger another Reload if credentials have been provided */
         if (status == Window.OK && shouldProceedReloading(monitor, bookmark)) {
@@ -1036,21 +962,6 @@ public class Controller {
   private void loadFavicon(final IBookMark bookmark, final IProgressMonitor monitor, final URI feedLink, URI feedHomepage) {
     try {
       byte[] faviconBytes = null;
-
-      /* Specially Handle Synchronized Feeds if matching a set of URLs */
-      if (SyncUtils.isSynchronized(bookmark)) {
-        String link = bookmark.getFeedLinkReference().getLinkAsText();
-        if (SyncUtils.GOOGLE_READER_ALL_ITEMS_FEED.equals(link))
-          faviconBytes = toByte("/icons/obj16/bookmark.gif"); //$NON-NLS-1$
-        else if (SyncUtils.GOOGLE_READER_STARRED_FEED.equals(link))
-          faviconBytes = toByte("/icons/obj16/gr_starred.gif"); //$NON-NLS-1$
-        else if (SyncUtils.GOOGLE_READER_SHARED_ITEMS_FEED.equals(link))
-          faviconBytes = toByte("/icons/obj16/gr_shared.gif"); //$NON-NLS-1$
-        else if (SyncUtils.GOOGLE_READER_RECOMMENDED_ITEMS_FEED.equals(link))
-          faviconBytes = toByte("/icons/obj16/gr_recommended.gif"); //$NON-NLS-1$
-        else if (SyncUtils.GOOGLE_READER_NOTES_FEED.equals(link))
-          faviconBytes = toByte("/icons/obj16/gr_notes.gif"); //$NON-NLS-1$
-      }
 
       /* First try using the Homepage of the Feed */
       if (faviconBytes == null && feedHomepage != null && StringUtils.isSet(feedHomepage.toString()) && feedHomepage.isAbsolute())
@@ -1093,14 +1004,6 @@ public class Controller {
       OwlDAO.save(bookmark);
   }
 
-  private byte[] toByte(String file) {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    InputStream fileStream = getClass().getResourceAsStream(file);
-    CoreUtils.copy(fileStream, out);
-
-    return out.toByteArray();
-  }
-
   private void updateErrorIndicator(final IBookMark bookmark, final IProgressMonitor monitor, CoreException ex) {
 
     /* Return on Cancelation or shutdown or deletion */
@@ -1129,15 +1032,9 @@ public class Controller {
       else
         bookmark.removeProperty(LOAD_ERROR_KEY);
 
-      String link = null;
-      if (ex instanceof SyncConnectionException)
-        link = ((SyncConnectionException) ex).getUserUrl();
-      if (StringUtils.isSet(link))
-        bookmark.setProperty(LOAD_ERROR_LINK_KEY, link);
-      else
-        bookmark.removeProperty(LOAD_ERROR_LINK_KEY);
+      bookmark.removeProperty(LOAD_ERROR_LINK_KEY);
 
-      if (!wasShowingError || (oldMessage != null && message == null) || (message != null && !message.equals(oldMessage)) || (oldLink != null && link == null) || (link != null && !link.equals(oldLink)))
+      if (!wasShowingError || (oldMessage != null && message == null) || (message != null && !message.equals(oldMessage)) || oldLink != null)
         fBookMarkDAO.save(bookmark);
     }
   }
@@ -1243,10 +1140,6 @@ public class Controller {
 
     /* Create the Download Service */
     fDownloadService = new DownloadService();
-
-    /* Create the Sync Service */
-    if (!InternalOwl.TESTING)
-      fSyncService = new SyncService();
 
     /* Register Listeners */
     registerListeners();
@@ -1493,10 +1386,6 @@ public class Controller {
     /* Stop the Saved Search Service */
     if (fSavedSearchService != null)
       fSavedSearchService.stopService();
-
-    /* Stop the Sync Service */
-    if (fSyncService != null)
-      fSyncService.stopService(false);
 
     /* Shutdown ApplicationServer */
     ApplicationServer.getDefault().shutdown();

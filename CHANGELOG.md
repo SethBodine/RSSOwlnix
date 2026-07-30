@@ -4,6 +4,211 @@
 
 ### Removed
 
+- **Finished removing Google Reader / synchronization code from core, UI, and tests**
+  Follow-up to the previous pass, which was scoped to `org.rssowl.ui`.
+  This pass removes the remaining Google Reader / sync code from
+  `org.rssowl.core`, the last few UI call sites that depended on it, and
+  the tests that exercised it, so nothing dead is left anywhere in the
+  codebase.
+
+  Removed entirely:
+  - `SyncUtils`, `SyncItem`, `SyncConnectionException` (core sync
+    utilities and data model).
+  - `ReaderProtocolHandler`, the `reader://`/`readers://` scheme handler
+    (+ its registration in `org.rssowl.core/plugin.xml` and 5 message
+    keys).
+  - `org.rssowl.core.internal.interpreter.json.JSONInterpreter`, the
+    Google Reader JSON-stream parser, and its `interpretJSONObject()`
+    wiring in `IInterpreterService`/`InterpreterServiceImpl`. Confirmed
+    distinct from and unrelated to `JsonInterpreter` (the general
+    JSON Feed format parser), which is untouched, as are the shared
+    `JSONObject`/`JSONArray`/`JSONTokener`/`JSONException` library
+    classes it still uses.
+  - `SyncConnectionTests`, `SyncServiceTest`, `SyncUtilsTest` (test
+    classes exercising the above), plus their suite references in
+    `UITests`/`LocalTests`, and an orphaned `testGoogleReaderSync`/
+    `testGetGoogleReaderAPIToken` pair in `ConnectionTests` that was
+    already `@Deprecated`/`@Ignore`d.
+
+  Trimmed from existing files:
+  - `DefaultProtocolHandler`: Google ClientLogin-era 403 error parsing
+    (`isSyncAuthenticationIssue()`, `handleForbidden()`), 12 constants,
+    9 message keys.
+  - `IConnectionPropertyConstants`: `ITEM_LIMIT`, `DATE_LIMIT`,
+    `UNCOMMITTED_ITEMS` — all exclusively consumed by the sync/reader
+    machinery above.
+  - `Controller`: sync-derived item/date reload limits, the
+    Google-login-cancel timestamp, the synchronized-feed branch of the
+    login-dialog locking and `openLoginDialogInternal()`, Google Reader
+    favicon special-casing, and `SyncConnectionException`-based
+    error-link tracking (which could never be populated by anything
+    else).
+  - `ApplicationServiceImpl`: dead Google-labels/read-state merge block
+    and an unreachable `isSynchronized` skip-guard.
+  - `News`/`Feed`/`MergeUtils`: the synchronized-feed fast paths in
+    `merge()`/`mergeNews()`/`copyWithoutDuplicates()` (GUID-based
+    matching, label/state merge shortcuts) and the `EXCLUDE_PROPERTIES`
+    set that shielded Google-only properties from ordinary merging —
+    all dead once no feed can be synchronized.
+  - `URIUtils`: dead `readers://` scheme check in `toHTTP()`.
+  - `ApplicationActionBarAdvisor`, `TutorialWizard`, `TutorialPage`: the
+    "Google Reader Synchronization" help-menu item and tutorial chapter,
+    already dead-gated behind `SyncUtils.ENABLED`.
+  - `OwlUI`: the unreachable `openSyncLogin()`.
+  - `LoginDialog`: collapsed the sync-login variant entirely — dropped
+    the 4-arg constructor, `fIsSyncLogin` field, forced
+    remember-password behavior, and the "create a Google account" link
+    injected into the button bar.
+  - `AddCredentialsDialog`, `CredentialsPreferencesPage`: dead Google
+    Reader autocomplete suggestion, label special-case, and synthetic
+    credentials-list entry.
+  - `GeneralPropertyPage`, `RetentionPropertyPage`,
+    `InformationPropertyPage`: removed `isSynchronized`-based branching
+    (read-only feed field, checkbox labels, load-status messages, "find
+    out more" link) now that no bookmark can be synchronized; 6 more
+    orphaned message keys.
+  - `NewsGrouping`: a dead `isSynchronized` guard in group-ID
+    determination.
+  - `MyCredentialsProvider`, `ConnectionTests`: dropped a test-only
+    Google credentials branch and the two dead test methods above.
+  - `InterpreterTest`: removed `testJSON()`, which exclusively exercised
+    the deleted `JSONInterpreter`, and its now-orphaned
+    `data/interpreter/feed_json.txt` fixture.
+  - `MergeUtilsTest`: removed `testMergeExcludedProperties()` (tested
+    the removed `EXCLUDE_PROPERTIES` mechanism) and simplified
+    `testMergeProperties()`, which had incidentally piggybacked a sync
+    constant onto an otherwise unrelated property-merge test.
+
+  Also removed: 2 orphaned comments in `Preference`/`DefaultPreferences`
+  left behind by the earlier `CLEAN_UP_BM_BY_SYNCHRONIZATION` removal.
+
+  Not deleted: `icons/wizban/reader_wiz.png` is now unreferenced, same
+  as the icons noted in the previous entry below — left in place since
+  removing binary assets isn't part of this pass.
+
+  `org.rssowl.core/src/org/rssowl/core/util/SyncUtils.java` (deleted)
+  `org.rssowl.core/src/org/rssowl/core/util/SyncItem.java` (deleted)
+  `org.rssowl.core/src/org/rssowl/core/connection/SyncConnectionException.java` (deleted)
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/ReaderProtocolHandler.java` (deleted)
+  `org.rssowl.core/src/org/rssowl/core/internal/interpreter/json/JSONInterpreter.java` (deleted)
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/connection/SyncConnectionTests.java` (deleted)
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/ui/SyncServiceTest.java` (deleted)
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/util/SyncUtilsTest.java` (deleted)
+  `org.rssowl.core.tests/data/interpreter/feed_json.txt` (deleted)
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/DefaultProtocolHandler.java`
+  `org.rssowl.core/src/org/rssowl/core/connection/IConnectionPropertyConstants.java`
+  `org.rssowl.core/src/org/rssowl/core/interpreter/IInterpreterService.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/interpreter/InterpreterServiceImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/ApplicationServiceImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/News.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/Feed.java`
+  `org.rssowl.core/src/org/rssowl/core/util/MergeUtils.java`
+  `org.rssowl.core/src/org/rssowl/core/util/URIUtils.java`
+  `org.rssowl.core/src/org/rssowl/core/persist/pref/Preference.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/pref/DefaultPreferences.java`
+  `org.rssowl.core/plugin.xml`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationActionBarAdvisor.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/OwlUI.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/LoginDialog.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/AddCredentialsDialog.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/preferences/CredentialsPreferencesPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/GeneralPropertyPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/RetentionPropertyPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/InformationPropertyPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/welcome/TutorialWizard.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/welcome/TutorialPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/editors/feed/NewsGrouping.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/connection/ConnectionTests.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/connection/MyCredentialsProvider.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/interpreter/InterpreterTest.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/util/MergeUtilsTest.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/UITests.java`
+  `org.rssowl.core.tests/src/org/rssowl/core/tests/LocalTests.java`
+  Several `Messages.java`/`messages.properties` pairs across the touched
+  packages above.
+
+- **Removed dead Google Reader / synchronization service code**
+  Google Reader shut down in 2013, and the sync feature that depended on
+  it had already been fully disabled in code (`SyncUtils.ENABLED =
+  false`). This pass removes the dead code paths that referenced it
+  throughout the UI plugin, without touching the OPML/keyword/recommended
+  import paths or the underlying `org.rssowl.core` connection/sync
+  utility classes (`SyncUtils`, `SyncItem`, `ReaderProtocolHandler`,
+  `SyncConnectionException`), which are left in place as a follow-up.
+
+  Removed entirely:
+  - `SyncService` and `SyncItemsManager` - the background sync engine
+    that batched news-state changes and pushed them to the Google
+    Reader API.
+  - `ShowSynchronizationStatusAction` and its `SynchronizationStatusDialog`
+    - showed last-sync status; both were already unwired from the menu
+      (commented out in `plugin.xml`).
+  - `UnsubscribeGoogleReaderAction` - migrated synchronized bookmarks
+    into a "Google Reader Archive" folder; already unwired from the menu.
+
+  Trimmed from existing files:
+  - `Controller`: the `SyncService` field, accessor, lifecycle
+    (start/stop), and the uncommitted-sync-items connection property.
+  - `ApplicationWorkbenchWindowAdvisor`: the on-minimize sync trigger.
+  - `ManageLabelsPreferencePage`: the label-rename propagation that
+    pushed renamed labels to Google-Reader-synced news items.
+  - `CleanUpModel` (+ `CleanUpOperations`, `CleanUpOptionsPage`,
+    `CleanUpWizard`): the "delete feeds no longer subscribed to in
+    Google Reader" clean-up option, including the OPML-from-Google
+    fetch it relied on. This option was already dead-gated behind
+    `SyncUtils.ENABLED`.
+  - `ImportSourcePage`: the "Synchronize with Google Reader" import
+    source (`Source.GOOGLE`), its radio button, and related branches.
+    The OPML file/website, keyword search, and recommended-feeds import
+    sources are unaffected.
+  - `ImportElementsPage`: `importFromGoogleReader()` and the
+    `enableSynchronization(...)` / `setSynchronizationProperties(...)`
+    helper cluster used only for Google-Reader-synced bookmarks, the
+    Google-Reader-specific auth-retry and `SyncConnectionException`
+    handling, and the now-unused `authToken` parameter on the shared
+    `openStream()` helper (all other import paths always passed `null`).
+
+  Also removed as a result: the orphaned `CLEAN_UP_BM_BY_SYNCHRONIZATION`
+  preference key (`Preference`, `DefaultPreferences`,
+  `PreferencesInitializer`), the dead commented-out
+  `ShowSynchronizationStatusAction`/`UnsubscribeGoogleReaderAction`
+  entries and their `action.label.34`/`action.label.40` strings from
+  `plugin.xml`/`plugin.properties`, and roughly twenty now-orphaned
+  message keys across the `actions`, `dialogs`, `dialogs/preferences`,
+  `dialogs/cleanup`, and `dialogs/importer` `Messages.java`/
+  `messages.properties` pairs.
+
+  Not touched in this pass (still reference Google Reader/sync, but are
+  outside `org.rssowl.ui` or are test-only): `org.rssowl.core`'s
+  `SyncUtils`, `SyncItem`, `ReaderProtocolHandler`,
+  `SyncConnectionException`, and `org.rssowl.core.tests`'
+  `SyncConnectionTests`/`SyncServiceTest`, which currently exercise the
+  now-deleted `SyncService`/`SyncItemsManager` and will need updating in
+  a follow-up.
+
+  `org.rssowl.ui/src/org/rssowl/ui/internal/services/SyncService.java` (deleted)
+  `org.rssowl.ui/src/org/rssowl/ui/internal/services/SyncItemsManager.java` (deleted)
+  `org.rssowl.ui/src/org/rssowl/ui/internal/actions/ShowSynchronizationStatusAction.java` (deleted)
+  `org.rssowl.ui/src/org/rssowl/ui/internal/actions/UnsubscribeGoogleReaderAction.java` (deleted)
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/SynchronizationStatusDialog.java` (deleted)
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/ApplicationWorkbenchWindowAdvisor.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/PreferencesInitializer.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/preferences/ManageLabelsPreferencePage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/cleanup/CleanUpModel.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/cleanup/CleanUpOperations.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/cleanup/CleanUpOptionsPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/cleanup/CleanUpWizard.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/importer/ImportSourcePage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/importer/ImportElementsPage.java`
+  `org.rssowl.core/src/org/rssowl/core/persist/pref/Preference.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/pref/DefaultPreferences.java`
+  `org.rssowl.ui/plugin.xml`
+  `org.rssowl.ui/plugin.properties`
+  `Messages.java` / `messages.properties` in `actions`, `dialogs`,
+  `dialogs/preferences`, `dialogs/cleanup`, `dialogs/importer`
+
 - **Dropped dead third-party services from `org.rssowl.ui/plugin.xml` and `plugin.eclipse.xml`**
   Several `KeywordFeed`, `LinkTransformer`, and `FeedSearch` contributions
   pointed at services that have been shut down or had their RSS output

@@ -50,7 +50,6 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.rssowl.core.Owl;
 import org.rssowl.core.connection.AuthenticationRequiredException;
@@ -59,10 +58,7 @@ import org.rssowl.core.connection.CredentialsException;
 import org.rssowl.core.connection.HttpConnectionInputStream;
 import org.rssowl.core.connection.IAbortable;
 import org.rssowl.core.connection.IConnectionPropertyConstants;
-import org.rssowl.core.connection.ICredentials;
 import org.rssowl.core.connection.IProtocolHandler;
-import org.rssowl.core.connection.SyncConnectionException;
-import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.interpreter.ITypeImporter;
 import org.rssowl.core.interpreter.InterpreterException;
 import org.rssowl.core.interpreter.ParserException;
@@ -72,20 +68,17 @@ import org.rssowl.core.persist.IFeed;
 import org.rssowl.core.persist.IFolder;
 import org.rssowl.core.persist.IFolderChild;
 import org.rssowl.core.persist.ILabel;
-import org.rssowl.core.persist.IModelFactory;
 import org.rssowl.core.persist.INewsBin;
 import org.rssowl.core.persist.IPreference;
 import org.rssowl.core.persist.ISearchFilter;
 import org.rssowl.core.persist.ISearchMark;
 import org.rssowl.core.persist.dao.OwlDAO;
 import org.rssowl.core.persist.dao.IBookMarkDAO;
-import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.persist.reference.FeedLinkReference;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.Pair;
 import org.rssowl.core.util.RegExUtils;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.Activator;
 import org.rssowl.ui.internal.Application;
@@ -96,7 +89,6 @@ import org.rssowl.ui.internal.dialogs.LoginDialog;
 import org.rssowl.ui.internal.dialogs.PreviewFeedDialog;
 import org.rssowl.ui.internal.dialogs.importer.ImportSourcePage.Source;
 import org.rssowl.ui.internal.dialogs.welcome.WelcomeWizard;
-import org.rssowl.ui.internal.util.BrowserUtils;
 import org.rssowl.ui.internal.util.FolderChildCheckboxTree;
 import org.rssowl.ui.internal.util.JobRunner;
 import org.rssowl.ui.internal.util.LayoutUtils;
@@ -113,7 +105,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -504,8 +495,6 @@ public class ImportElementsPage extends WizardPage {
     /* Return if the Source did not Change */
     if (source == Source.RECOMMENDED && fCurrentSourceKind == Source.RECOMMENDED)
       return;
-    else if (source == Source.GOOGLE && fCurrentSourceKind == Source.GOOGLE)
-      return;
     else if (source == Source.KEYWORD && fCurrentSourceKind == Source.KEYWORD && importSourcePage.getImportKeywords().equals(fCurrentSourceKeywords) && fCurrentSourceLocalizedFeedSearch == importSourcePage.isLocalizedFeedSearch())
       return;
     else if (source == Source.RESOURCE && fCurrentSourceKind == Source.RESOURCE) {
@@ -543,16 +532,6 @@ public class ImportElementsPage extends WizardPage {
     /* Clear Viewer before loading */
     setImportedElements(Collections.EMPTY_LIST);
 
-    /* Ask for Username and Password if importing from Google */
-    if (source == Source.GOOGLE) {
-      if (!SyncUtils.hasSyncCredentials() && OwlUI.openSyncLogin(getShell()) != IDialogConstants.OK_ID) {
-        setErrorMessage(Messages.ImportElementsPage_MISSING_ACCOUNT);
-        setPageComplete(false);
-        fCurrentSourceKind = null;
-        return;
-      }
-    }
-
     /* Import Runnable */
     Runnable runnable = new Runnable() {
       @Override
@@ -567,10 +546,6 @@ public class ImportElementsPage extends WizardPage {
           else if (source == Source.RESOURCE && URIUtils.looksLikeLink(fCurrentSourceResource, false))
             importFromOnlineResource(new URI(URIUtils.ensureProtocol(fCurrentSourceResource)));
 
-          /* Import from Google */
-          else if (source == Source.GOOGLE)
-            importFromGoogleReader();
-
           /* Import by Keyword Search */
           else if (source == Source.KEYWORD)
             importFromKeywordSearch(fCurrentSourceKeywords, fCurrentSourceLocalizedFeedSearch);
@@ -582,34 +557,6 @@ public class ImportElementsPage extends WizardPage {
 
         /* Log and Show any Exception during Import */
         catch (Exception e) {
-
-          /* Offer a Login Dialog in case Google Reader import fails with provided credentials */
-          if (e instanceof InvocationTargetException && e.getCause() instanceof AuthenticationRequiredException && source == Source.GOOGLE) {
-            if (OwlUI.openSyncLogin(getShell()) == IDialogConstants.OK_ID) {
-              try {
-                importFromGoogleReader();
-                return;
-              } catch (InvocationTargetException ex1) {
-                e = ex1; //Pass exception on to outer handling
-              } catch (InterruptedException ex2) {
-                e = ex2; //Pass exception on to outer handling
-              }
-            }
-          }
-
-          /* Handle SyncConnectionException */
-          if (e instanceof InvocationTargetException && e.getCause() instanceof SyncConnectionException) {
-            String userLink = ((SyncConnectionException) e.getCause()).getUserUrl();
-            if (StringUtils.isSet(userLink)) {
-              MessageBox box = new MessageBox(getShell(), SWT.ICON_ERROR | SWT.OK | SWT.CANCEL);
-              box.setText(Messages.ImportElementsPage_ERROR_IMPORT_GR);
-              String msg = NLS.bind(Messages.ImportElementsPage_ERROR_IMPORT_GR_DETAILS, e.getCause().getMessage());
-
-              box.setMessage(msg);
-              if (box.open() == SWT.OK)
-                BrowserUtils.openLinkExternal(userLink);
-            }
-          }
 
           /* Log Message */
           String logMessage = e.getMessage();
@@ -737,7 +684,7 @@ public class ImportElementsPage extends WizardPage {
           }
 
           /* Open Stream */
-          in = openStream(link, monitor, INITIAL_CON_TIMEOUT, false, false, null);
+          in = openStream(link, monitor, INITIAL_CON_TIMEOUT, false, false);
 
           /* Return on Cancellation */
           if (monitor.isCanceled() || Controller.getDefault().isShuttingDown()) {
@@ -866,171 +813,6 @@ public class ImportElementsPage extends WizardPage {
 
     /* Run Operation in Background and allow for Cancellation */
     getContainer().run(true, true, runnable);
-  }
-
-  private void importFromGoogleReader() throws InvocationTargetException, InterruptedException {
-    IRunnableWithProgress runnable = new IRunnableWithProgress() {
-      @Override
-      public void run(final IProgressMonitor monitor) throws InvocationTargetException {
-        InputStream in = null;
-        boolean canceled = false;
-        Exception error = null;
-        try {
-          monitor.beginTask(Messages.ImportElementsPage_IMPORT_GOOGLE_READER, IProgressMonitor.UNKNOWN);
-          monitor.subTask(Messages.ImportElementsPage_CONNECTING);
-          fCurrentProgressMonitor = monitor;
-
-          /* Return on Cancellation */
-          if (monitor.isCanceled() || Controller.getDefault().isShuttingDown()) {
-            canceled = true;
-            return;
-          }
-
-          /* Obtain Google Account Credentials */
-          ICredentials credentials = Owl.getConnectionService().getAuthCredentials(URI.create(SyncUtils.GOOGLE_LOGIN_URL), null);
-          if (credentials == null) {
-            canceled = true;
-            return;
-          }
-
-          /* Obtain Auth Token */
-          String googleAuthToken = SyncUtils.getGoogleAuthToken(credentials.getUsername(), credentials.getPassword(), true, monitor);
-
-          /* Return on Cancellation */
-          if (monitor.isCanceled() || Controller.getDefault().isShuttingDown()) {
-            canceled = true;
-            return;
-          }
-
-          /* Open Stream */
-          in = openStream(URI.create(SyncUtils.GOOGLE_READER_OPML_URI), monitor, INITIAL_CON_TIMEOUT, false, false, googleAuthToken);
-
-          /* Return on Cancellation */
-          if (monitor.isCanceled() || Controller.getDefault().isShuttingDown()) {
-            canceled = true;
-            return;
-          }
-
-          /* Try to Import */
-          try {
-            final List<IEntity> types = Owl.getInterpreter().importFrom(in);
-            enableSynchronization(types);
-
-            /* Return on Cancellation */
-            if (monitor.isCanceled() || Controller.getDefault().isShuttingDown()) {
-              canceled = true;
-              return;
-            }
-
-            /* Show in UI */
-            JobRunner.runInUIThread(getShell(), new Runnable() {
-              @Override
-              public void run() {
-                setImportedElements(types);
-                updateMessage(true);
-              }
-            });
-          }
-
-          /* Error Importing from File - Try Bruteforce then */
-          catch (Exception e) {
-            error = e;
-          }
-        }
-
-        /* Error finding a Handler for the Link - Rethrow */
-        catch (Exception e) {
-          throw new InvocationTargetException(e);
-        } finally {
-
-          /* Reset Field in case of error or cancellation */
-          if (canceled || error != null)
-            fCurrentProgressMonitor = null;
-
-          /* Close Input Stream */
-          if (in != null) {
-            try {
-              if ((canceled || error != null) && in instanceof IAbortable)
-                ((IAbortable) in).abort();
-              else
-                in.close();
-            } catch (IOException e) {
-              throw new InvocationTargetException(e);
-            }
-          }
-        }
-
-        /* Done */
-        monitor.done();
-        fCurrentProgressMonitor = null;
-      }
-    };
-
-    /* Run Operation in Background and allow for Cancellation */
-    getContainer().run(true, true, runnable);
-  }
-
-  private void enableSynchronization(List<IEntity> types) throws URISyntaxException {
-
-    /* Convert to Synchronized Feeds */
-    for (IEntity entity : types) {
-      if (entity instanceof IFolder)
-        enableSynchronization((IFolder) entity);
-      else if (entity instanceof IBookMark)
-        enableSynchronization((IBookMark) entity);
-    }
-
-    /* Add Special Google Reader Feeds */
-    if (!types.isEmpty() && types.get(0) instanceof IFolder) {
-      IModelFactory factory = Owl.getModelFactory();
-      IFolder root = (IFolder) types.get(0);
-
-      /* Shared Items */
-      FeedLinkReference feedLinkRef = new FeedLinkReference(URI.create(SyncUtils.GOOGLE_READER_SHARED_ITEMS_FEED));
-      IBookMark bm = factory.createBookMark(null, root, feedLinkRef, Messages.ImportElementsPage_GR_SHARED_ITEMS);
-      setSynchronizationProperties(bm);
-
-      /* Recommended Items */
-      feedLinkRef = new FeedLinkReference(URI.create(SyncUtils.GOOGLE_READER_RECOMMENDED_ITEMS_FEED));
-      bm = factory.createBookMark(null, root, feedLinkRef, Messages.ImportElementsPage_GR_RECOMMENDED_ITEMS);
-      setSynchronizationProperties(bm);
-
-      /* Notes */
-      feedLinkRef = new FeedLinkReference(URI.create(SyncUtils.GOOGLE_READER_NOTES_FEED));
-      bm = factory.createBookMark(null, root, feedLinkRef, Messages.ImportElementsPage_GR_NOTES);
-      setSynchronizationProperties(bm);
-    }
-  }
-
-  private void enableSynchronization(IFolder folder) throws URISyntaxException {
-    List<IFolderChild> children = folder.getChildren();
-    for (IFolderChild child : children) {
-      if (child instanceof IFolder)
-        enableSynchronization((IFolder) child);
-      else if (child instanceof IBookMark)
-        enableSynchronization((IBookMark) child);
-    }
-  }
-
-  private void enableSynchronization(IBookMark bm) throws URISyntaxException {
-
-    /* Convert the Feed Link to enable Synchronization */
-    FeedLinkReference feedLinkReference = bm.getFeedLinkReference();
-    bm.setFeedLinkReference(new FeedLinkReference(enableSynchronization(feedLinkReference.getLink())));
-
-    /* Add some specific settings that improve the sync experience */
-    setSynchronizationProperties(bm);
-  }
-
-  private void setSynchronizationProperties(IBookMark bm) {
-    IPreferenceScope preferences = Owl.getPreferenceService().getEntityScope(bm);
-    preferences.putBoolean(DefaultPreferences.BM_RELOAD_ON_STARTUP, true);
-    preferences.putBoolean(DefaultPreferences.NEVER_DEL_LABELED_NEWS_STATE, false);
-  }
-
-  private URI enableSynchronization(URI uri) throws URISyntaxException {
-    String scheme = URIUtils.HTTPS_SCHEME.equals(uri.getScheme()) ? SyncUtils.READER_HTTPS_SCHEME : SyncUtils.READER_HTTP_SCHEME;
-    return new URI(scheme, uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
   }
 
   private void importFromKeywordSearch(final String keywords, final boolean isLocalizedSearch) throws Exception {
@@ -1169,7 +951,7 @@ public class ImportElementsPage extends WizardPage {
           break;
 
         /* Open Stream to potential Feed */
-        in = openStream(feedLink, monitor, FEED_CON_TIMEOUT, false, false, null);
+        in = openStream(feedLink, monitor, FEED_CON_TIMEOUT, false, false);
 
         /* Return on Cancellation */
         if (monitor.isCanceled() || Controller.getDefault().isShuttingDown()) {
@@ -1257,7 +1039,7 @@ public class ImportElementsPage extends WizardPage {
         return null;
 
       /* Open Stream */
-      in = openStream(link, monitor, INITIAL_CON_TIMEOUT, true, isLocalizedSearch, null);
+      in = openStream(link, monitor, INITIAL_CON_TIMEOUT, true, isLocalizedSearch);
 
       /* Return on Cancellation */
       if (monitor.isCanceled() || Controller.getDefault().isShuttingDown())
@@ -1280,18 +1062,11 @@ public class ImportElementsPage extends WizardPage {
     }
   }
 
-  private InputStream openStream(URI link, IProgressMonitor monitor, int timeout, boolean setAcceptLanguage, boolean isLocalized, String authToken) throws ConnectionException {
+  private InputStream openStream(URI link, IProgressMonitor monitor, int timeout, boolean setAcceptLanguage, boolean isLocalized) throws ConnectionException {
     IProtocolHandler handler = Owl.getConnectionService().getHandler(link);
 
     Map<Object, Object> properties = new HashMap<Object, Object>();
     properties.put(IConnectionPropertyConstants.CON_TIMEOUT, timeout);
-
-    /* Set Authorization Header if required */
-    if (StringUtils.isSet(authToken)) {
-      Map<String, String> headers = new HashMap<String, String>();
-      headers.put("Authorization", SyncUtils.getGoogleAuthorizationHeader(authToken)); //$NON-NLS-1$
-      properties.put(IConnectionPropertyConstants.HEADERS, headers);
-    }
 
     /* Set the Accept-Language Header */
     if (setAcceptLanguage) {

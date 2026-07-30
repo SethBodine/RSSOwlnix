@@ -60,7 +60,6 @@ import org.rssowl.core.persist.dao.OwlDAO;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.util.Pair;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.internal.Activator;
 import org.rssowl.ui.internal.Application;
@@ -315,10 +314,7 @@ public class CredentialsPreferencesPage extends PreferencePage implements IWorkb
         switch (cell.getColumnIndex()) {
           case 0:
             String link = data.getNormalizedLink().toString();
-            if (SyncUtils.GOOGLE_LOGIN_URL.equals(link))
-              cell.setText("Google Reader"); //$NON-NLS-1$
-            else
-              cell.setText(link);
+            cell.setText(link);
             break;
 
           case 1:
@@ -578,9 +574,6 @@ public class CredentialsPreferencesPage extends PreferencePage implements IWorkb
 
       pairs.add(Pair.create(feedLink, realm));
     }
-
-    /* Also add Google Reader Login */
-    pairs.add(Pair.create(URI.create(SyncUtils.GOOGLE_LOGIN_URL), (String) null));
 
     for (Pair<URI, String> pair : pairs) {
       URI feedLink = pair.getFirst();

@@ -625,7 +625,7 @@ public class URIUtils {
 
     String newScheme = HTTP_SCHEME;
     String strUri = uri.toString();
-    if (SyncUtils.READER_HTTPS_SCHEME.equals(scheme) || strUri.startsWith(FEEDS) || strUri.startsWith(FEED_HTTPS))
+    if (strUri.startsWith(FEEDS) || strUri.startsWith(FEED_HTTPS))
       newScheme = HTTPS_SCHEME;
 
     try {

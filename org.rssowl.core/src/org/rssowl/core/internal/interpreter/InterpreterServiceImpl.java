@@ -36,8 +36,6 @@ import org.eclipse.osgi.util.NLS;
 import org.jdom.Document;
 import org.jdom.input.DOMBuilder;
 import org.rssowl.core.internal.Activator;
-import org.rssowl.core.internal.interpreter.json.JSONInterpreter;
-import org.rssowl.core.internal.interpreter.json.JSONObject;
 import org.rssowl.core.interpreter.IElementHandler;
 import org.rssowl.core.interpreter.IFormatInterpreter;
 import org.rssowl.core.interpreter.IInterpreterService;
@@ -163,17 +161,6 @@ public class InterpreterServiceImpl implements IInterpreterService {
 
     /* Interpret Document into a Feed */
     fFormatInterpreters.get(format).interpret(document, feed);
-  }
-
-  /*
-   * @see
-   * org.rssowl.core.interpreter.IInterpreterService#interpretJSONObject(org
-   * .rssowl.core.internal.interpreter.json.JSONObject,
-   * org.rssowl.core.persist.IFeed)
-   */
-  @Override
-  public void interpretJSONObject(JSONObject json, IFeed feed) throws InterpreterException {
-    new JSONInterpreter().interpret(json, feed);
   }
 
   /*

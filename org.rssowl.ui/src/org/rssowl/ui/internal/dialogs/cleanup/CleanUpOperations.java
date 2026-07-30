@@ -51,7 +51,6 @@ public class CleanUpOperations {
   private final boolean fDeleteReadNews;
   private final boolean fKeepUnreadNews;
   private final boolean fKeepLabeledNews;
-  private final boolean fDeleteFeedsBySynchronization;
 
   /**
    * @param lastVisitState
@@ -60,7 +59,6 @@ public class CleanUpOperations {
    * @param lastUpdateInDays
    * @param deleteFeedsByConError
    * @param deleteFeedsByDuplicates
-   * @param deleteFeedsBySynchronization
    * @param maxNewsCountPerFeedState
    * @param maxNewsCountPerFeed
    * @param maxNewsAgeState
@@ -69,14 +67,13 @@ public class CleanUpOperations {
    * @param keepUnreadNews
    * @param keepLabeledNews
    */
-  public CleanUpOperations(boolean lastVisitState, int lastVisitInDays, boolean lastUpdateState, int lastUpdateInDays, boolean deleteFeedsByConError, boolean deleteFeedsByDuplicates, boolean deleteFeedsBySynchronization, boolean maxNewsCountPerFeedState, int maxNewsCountPerFeed, boolean maxNewsAgeState, int maxNewsAge, boolean deleteReadNews, boolean keepUnreadNews, boolean keepLabeledNews) {
+  public CleanUpOperations(boolean lastVisitState, int lastVisitInDays, boolean lastUpdateState, int lastUpdateInDays, boolean deleteFeedsByConError, boolean deleteFeedsByDuplicates, boolean maxNewsCountPerFeedState, int maxNewsCountPerFeed, boolean maxNewsAgeState, int maxNewsAge, boolean deleteReadNews, boolean keepUnreadNews, boolean keepLabeledNews) {
     fLastVisitInDaysState = lastVisitState;
     fLastVisitInDays = lastVisitInDays;
     fLastUpdateInDaysState = lastUpdateState;
     fLastUpdateInDays = lastUpdateInDays;
     fDeleteFeedsByConError = deleteFeedsByConError;
     fDeleteFeedsByDuplicates = deleteFeedsByDuplicates;
-    fDeleteFeedsBySynchronization = deleteFeedsBySynchronization;
     fMaxNewsCountPerFeedState = maxNewsCountPerFeedState;
     fMaxNewsCountPerFeed = maxNewsCountPerFeed;
     fMaxNewsAgeState = maxNewsAgeState;
@@ -104,10 +101,6 @@ public class CleanUpOperations {
 
   boolean deleteFeedsByConError() {
     return fDeleteFeedsByConError;
-  }
-
-  boolean deleteFeedsBySynchronization() {
-    return fDeleteFeedsBySynchronization;
   }
 
   boolean deleteFeedsByDuplicates() {

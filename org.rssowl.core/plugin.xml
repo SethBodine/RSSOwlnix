@@ -113,12 +113,6 @@
             class="org.rssowl.core.internal.connection.DefaultProtocolHandler"
             protocol="feeds"/>
       <protocolHandler
-            class="org.rssowl.core.internal.connection.ReaderProtocolHandler"
-            protocol="reader"/>
-      <protocolHandler
-            class="org.rssowl.core.internal.connection.ReaderProtocolHandler"
-            protocol="readers"/>
-      <protocolHandler
             class="org.rssowl.core.internal.connection.ShellProtocolHandler"
             protocol="shell"/>
    </extension>

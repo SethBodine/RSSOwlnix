@@ -28,7 +28,6 @@ import org.eclipse.core.runtime.Assert;
 import org.rssowl.core.persist.ICategory;
 import org.rssowl.core.persist.ICloud;
 import org.rssowl.core.persist.IFeed;
-import org.rssowl.core.persist.IGuid;
 import org.rssowl.core.persist.IImage;
 import org.rssowl.core.persist.INews;
 import org.rssowl.core.persist.INews.State;
@@ -37,7 +36,6 @@ import org.rssowl.core.persist.ITextInput;
 import org.rssowl.core.persist.reference.FeedReference;
 import org.rssowl.core.util.ArrayUtils;
 import org.rssowl.core.util.MergeUtils;
-import org.rssowl.core.util.SyncUtils;
 
 import java.net.URI;
 import java.text.DateFormat;
@@ -46,7 +44,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -837,52 +834,20 @@ public class Feed extends AbstractEntity implements IFeed {
 
     ComplexMergeResult<List<INews>> mergeResult = ComplexMergeResult.create(newsListCopy);
 
-    /* Synchronized Feed (speed up by relying on GUID) */
-    if (SyncUtils.isSynchronized(fLinkText)) {
+    for (int i = fNews.size() - 1; i >= 0; --i) {
+      INews existingNews = fNews.get(i);
+      int existingNewsIndex = findNews(newsListCopy, existingNews);
 
-      /* Map unique GUID to Pair of Index/News */
-      Map<String, INews> mapGuidToIncomingNews = new HashMap<>(newsListCopy.size());
-      for (int i = 0; i < newsListCopy.size(); i++) {
-        INews news = newsListCopy.get(i);
-        if (news.getGuid() != null)
-          mapGuidToIncomingNews.put(news.getGuid().getValue(), news);
+      /* News exists in feed: Merge it */
+      if (existingNewsIndex > -1) {
+        mergeResult.addAll(existingNews.merge(newsListCopy.get(existingNewsIndex)));
+        newsListCopy.remove(existingNewsIndex);
       }
 
-      for (int i = fNews.size() - 1; i >= 0; --i) {
-        INews existingNews = fNews.get(i);
-        INews incomingNews = existingNews.getGuid() != null ? mapGuidToIncomingNews.get(existingNews.getGuid().getValue()) : null;
-
-        /* News exists in feed: Merge it */
-        if (incomingNews != null) {
-          mergeResult.addAll(existingNews.merge(incomingNews));
-          newsListCopy.remove(incomingNews);
-        }
-
-        /* News does not exist in feed: Delete it */
-        else if (newsToCleanUp != null && existingNews.getState() == INews.State.DELETED) {
-          newsToCleanUp = ArrayUtils.ensureCapacity(newsToCleanUp, newsToCleanUpSize + 1);
-          newsToCleanUp[newsToCleanUpSize++] = i;
-        }
-      }
-    }
-
-    /* Non Synchronized Feed */
-    else {
-      for (int i = fNews.size() - 1; i >= 0; --i) {
-        INews existingNews = fNews.get(i);
-        int existingNewsIndex = findNews(newsListCopy, existingNews);
-
-        /* News exists in feed: Merge it */
-        if (existingNewsIndex > -1) {
-          mergeResult.addAll(existingNews.merge(newsListCopy.get(existingNewsIndex)));
-          newsListCopy.remove(existingNewsIndex);
-        }
-
-        /* News does not exist in feed: Delete it */
-        else if ((newsToCleanUp != null) && (existingNews.getState() == INews.State.DELETED)) {
-          newsToCleanUp = ArrayUtils.ensureCapacity(newsToCleanUp, newsToCleanUpSize + 1);
-          newsToCleanUp[newsToCleanUpSize++] = i;
-        }
+      /* News does not exist in feed: Delete it */
+      else if ((newsToCleanUp != null) && (existingNews.getState() == INews.State.DELETED)) {
+        newsToCleanUp = ArrayUtils.ensureCapacity(newsToCleanUp, newsToCleanUpSize + 1);
+        newsToCleanUp[newsToCleanUpSize++] = i;
       }
     }
 
@@ -935,12 +900,6 @@ public class Feed extends AbstractEntity implements IFeed {
   }
 
   private List<INews> copyWithoutDuplicates(List<INews> newsList) {
-
-    /* Perform fast lookup for synchronized feeds using GUID */
-    if (SyncUtils.isSynchronized(fLinkText))
-      return copyWithoutDuplicatesSynced(newsList);
-
-    /* Otherwise search rawly */
     List<INews> newsListCopy = new ArrayList<>(newsList.size());
     for (INews outerNews : newsList) {
       boolean containsNews = false;
@@ -953,23 +912,6 @@ public class Feed extends AbstractEntity implements IFeed {
 
       if (!containsNews)
         newsListCopy.add(outerNews);
-    }
-
-    return newsListCopy;
-  }
-
-  private List<INews> copyWithoutDuplicatesSynced(List<INews> newsList) {
-    Set<String> guids= new HashSet<>(newsList.size());
-    List<INews> newsListCopy = new ArrayList<>(newsList.size());
-    for (INews news : newsList) {
-      IGuid guid = news.getGuid();
-      if (guid == null)
-        continue; //Can not happen for a synchronized feed
-
-      if (!guids.contains(guid.getValue())) {
-        guids.add(guid.getValue());
-        newsListCopy.add(news);
-      }
     }
 
     return newsListCopy;

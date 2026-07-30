@@ -62,9 +62,6 @@ public class Messages extends NLS {
   public static String TutorialPage_SHARING;
   public static String TutorialPage_SHARING_TEXT;
   public static String TutorialPage_STORING_NEWS_BINS;
-  public static String TutorialPage_SYNCHRONIZATION;
-  public static String TutorialPage_SYNCHRONIZATION_TEXT;
-  public static String TutorialPage_SYNCHRONIZATION_TITLE;
   public static String TutorialPage_TIPS_AND_TRICKS;
   public static String TutorialPage_TIPS_TEXT;
   public static String TutorialPage_TIPS_TITLE;

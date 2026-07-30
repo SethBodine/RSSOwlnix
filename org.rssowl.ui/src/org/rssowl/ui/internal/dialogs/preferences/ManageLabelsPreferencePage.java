@@ -71,8 +71,6 @@ import org.rssowl.core.persist.dao.ILabelDAO;
 import org.rssowl.core.persist.reference.NewsReference;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.SearchHit;
-import org.rssowl.core.util.SyncItem;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.ui.internal.Activator;
 import org.rssowl.ui.internal.ApplicationWorkbenchWindowAdvisor;
 import org.rssowl.ui.internal.Controller;
@@ -330,7 +328,6 @@ public class ManageLabelsPreferencePage extends PreferencePage implements IWorkb
         RGB color = dialog.getColor();
 
         if (!label.getName().equals(name)) {
-          onLabelNameChanged(label, label.getName(), name);
           label.setName(name);
           changed = true;
         }
@@ -366,80 +363,6 @@ public class ManageLabelsPreferencePage extends PreferencePage implements IWorkb
       ConfirmDialog dialog = new ConfirmDialog(getShell(), Messages.ManageLabelsPreferencePage_CONFIRM_DELETE, Messages.ManageLabelsPreferencePage_NO_UNDO, msg, null);
       if (dialog.open() == IDialogConstants.OK_ID)
         deleteInBackground(selectedLabels);
-    }
-  }
-
-  private void onLabelNameChanged(final ILabel label, final String oldName, final String newName) {
-    IRunnableWithProgress runnableWithProgress = new IRunnableWithProgress() {
-      @Override
-      public void run(IProgressMonitor monitor) {
-        monitor.beginTask(Messages.ManageLabelsPreferencePage_WAIT_UPDATE, IProgressMonitor.UNKNOWN);
-        try {
-          List<SyncItem> syncItems = new ArrayList<SyncItem>();
-
-          ISearchField labelField = Owl.getModelFactory().createSearchField(INews.LABEL, INews.class.getName());
-          ISearchField feedField = Owl.getModelFactory().createSearchField(INews.FEED, INews.class.getName());
-
-          ISearchCondition labelCondition = Owl.getModelFactory().createSearchCondition(labelField, SearchSpecifier.IS, oldName);
-          ISearchCondition feedCondition = Owl.getModelFactory().createSearchCondition(feedField, SearchSpecifier.BEGINS_WITH, SyncUtils.READER_HTTP_SCHEME);
-
-          /* Find all news that are under sync control and have the label assigned */
-          List<SearchHit<NewsReference>> result = Owl.getPersistenceService().getModelSearch().searchNews(Arrays.asList(labelCondition, feedCondition), true);
-          List<List<SearchHit<NewsReference>>> chunks = CoreUtils.toChunks(result, LABELS_CHUNK_SIZE);
-          for (List<SearchHit<NewsReference>> chunk : chunks) {
-            for (SearchHit<NewsReference> item : chunk) {
-              INews news = item.getResult().resolve();
-
-              /* Item Exists */
-              if (news != null && news.isVisible()) {
-                if (SyncUtils.isSynchronized(news) && news.getLabels().contains(label)) {
-                  SyncItem syncItem = SyncItem.toSyncItem(news);
-                  syncItem.addLabel(newName);
-                  syncItem.removeLabel(oldName);
-                  syncItems.add(syncItem);
-                }
-              }
-
-              /* Index Issue */
-              else
-                CoreUtils.reportIndexIssue();
-            }
-          }
-
-          /* Tell SyncService to synchronize */
-          if (!syncItems.isEmpty())
-            Controller.getDefault().getSyncService().synchronize(syncItems);
-        } finally {
-          monitor.done();
-        }
-      }
-    };
-
-    /* Progress Dialog */
-    ProgressMonitorDialog dialog = new ProgressMonitorDialog(getShell()) {
-      @Override
-      protected void initializeBounds() {
-        super.initializeBounds();
-
-        /* Size */
-        Shell shell = getShell();
-        int width = convertHorizontalDLUsToPixels(OwlUI.MIN_DIALOG_WIDTH_DLU);
-        shell.setSize(width, shell.getSize().y);
-
-        /* New Location */
-        Rectangle containerBounds = shell.getParent().getBounds();
-        int x = Math.max(0, containerBounds.x + (containerBounds.width - width) / 2);
-        shell.setLocation(x, shell.getLocation().y);
-      }
-    };
-
-    /* Open and Run */
-    try {
-      dialog.run(true, false, runnableWithProgress);
-    } catch (InvocationTargetException e) {
-      Activator.safeLogError(e.getMessage(), e);
-    } catch (InterruptedException e) {
-      Activator.safeLogError(e.getMessage(), e);
     }
   }
 

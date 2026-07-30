@@ -36,7 +36,6 @@ import org.rssowl.core.persist.ICategory;
 import org.rssowl.core.persist.ILabel;
 import org.rssowl.core.persist.IPerson;
 import org.rssowl.core.util.MergeUtils;
-import org.rssowl.core.util.SyncUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,55 +99,20 @@ public class MergeUtilsTest {
     String key2 = "key2";
     String value2 = "value2";
     label0.setProperty(key2, value2);
-    String key3 = SyncUtils.GOOGLE_MARKED_READ;
-    String value3 = "value3";
-    label0.setProperty(key3, value3);
 
     ILabel label1 = new Label(null, "label1");
     label1.setProperty(key1, value1);
     String newValue2 = "newValue2";
     label1.setProperty(key2, newValue2);
-    key3 = "key3";
-    value3 = "value3";
-    label1.setProperty(key3, value3);
 
     ComplexMergeResult<?> mergeResult = MergeUtils.mergeProperties(label0, label1);
     assertEquals(true, mergeResult.getRemovedObjects().contains(value0));
     assertEquals(true, mergeResult.getRemovedObjects().contains(value2));
     assertEquals(true, mergeResult.isStructuralChange());
 
-    assertEquals(4, label0.getProperties().size());
-    assertEquals(3, label1.getProperties().size());
+    assertEquals(2, label0.getProperties().size());
+    assertEquals(2, label1.getProperties().size());
     assertEquals(value1, label0.getProperties().get(key1));
     assertEquals(newValue2, label0.getProperties().get(key2));
-    assertEquals(value3, label0.getProperties().get(key3));
-  }
-
-  /**
-   * Tests
-   * {@link MergeUtils#mergeProperties(org.rssowl.core.persist.IEntity, org.rssowl.core.persist.IEntity)}
-   * .
-   */
-  @Test
-  public void testMergeExcludedProperties() {
-    ILabel label0 = new Label(null, "label0");
-    String key0 = SyncUtils.GOOGLE_MARKED_READ;
-    String value0 = "value0";
-    label0.setProperty(key0, value0);
-    String key1 = SyncUtils.GOOGLE_MARKED_UNREAD;
-    String value1 = "value1";
-    label0.setProperty(key1, value1);
-    String key2 = SyncUtils.GOOGLE_LABELS;
-    String value2 = "value2";
-    label0.setProperty(key2, value2);
-
-    ILabel label1 = new Label(null, "label1");
-
-    ComplexMergeResult<?> mergeResult = MergeUtils.mergeProperties(label0, label1);
-    assertEquals(true, mergeResult.getRemovedObjects().isEmpty());
-    assertEquals(false, mergeResult.isStructuralChange());
-
-    assertEquals(3, label0.getProperties().size());
-    assertEquals(0, label1.getProperties().size());
   }
 }

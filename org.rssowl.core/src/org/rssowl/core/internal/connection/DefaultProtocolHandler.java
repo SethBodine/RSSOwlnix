@@ -80,7 +80,6 @@ import org.rssowl.core.connection.IProxyCredentials;
 import org.rssowl.core.connection.MonitorCanceledException;
 import org.rssowl.core.connection.NotModifiedException;
 import org.rssowl.core.connection.ProxyAuthenticationRequiredException;
-import org.rssowl.core.connection.SyncConnectionException;
 import org.rssowl.core.internal.Activator;
 import org.rssowl.core.internal.interpreter.JsonInterpreter;
 import org.rssowl.core.interpreter.EncodingException;
@@ -89,7 +88,6 @@ import org.rssowl.core.persist.IFeed;
 import org.rssowl.core.persist.IModelFactory;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.Triple;
 import org.rssowl.core.util.URIUtils;
 
@@ -133,7 +131,6 @@ public class DefaultProtocolHandler implements IProtocolHandler {
   private static final int HTTP_ERRORS = 400;
   private static final int HTTP_STATUS_NOT_MODIFIED = 304;
   private static final int HTTP_ERROR_AUTH_REQUIRED = 401;
-  private static final int HTTP_ERROR_FORBIDDEN = 403;
   private static final int HTTP_ERROR_PROXY_AUTH_REQUIRED = 407;
 
   /* Header Constants */
@@ -146,17 +143,6 @@ public class DefaultProtocolHandler implements IProtocolHandler {
   private static final String HEADER_RESPONSE_CONTENT_ENCODING = "Content-Encoding"; //$NON-NLS-1$
 
   /* Google Error Response Codes */
-  private static final String HEADER_RESPONSE_ERROR = "Error"; //$NON-NLS-1$
-  private static final String HEADER_RESPONSE_URL = "Url"; //$NON-NLS-1$
-  private static final String ERROR_BAD_AUTH = "BadAuthentication"; //$NON-NLS-1$
-  private static final String ERROR_NOT_VERIFIED = "NotVerified"; //$NON-NLS-1$
-  private static final String ERROR_NO_TERMS = "TermsNotAgreed"; //$NON-NLS-1$
-  private static final String ERROR_CAPTCHA_REQUIRED = "CaptchaRequired"; //$NON-NLS-1$
-  private static final String ERROR_UNKNOWN = "Unknown"; //$NON-NLS-1$
-  private static final String ERROR_ACCOUNT_DELETED = "AccountDeleted"; //$NON-NLS-1$
-  private static final String ERROR_ACCOUNT_DISABLED = "AccountDisabled"; //$NON-NLS-1$
-  private static final String ERROR_SERVICE_DISABLED = "ServiceDisabled"; //$NON-NLS-1$
-  private static final String ERROR_SERVICE_UNAVAILABLE = "ServiceUnavailable"; //$NON-NLS-1$
 
   /** Property to tell the XML parser to use platform encoding */
   public static final String USE_PLATFORM_ENCODING = "org.rssowl.core.internal.connection.DefaultProtocolHandler.UsePlatformEncoding"; //$NON-NLS-1$
@@ -696,15 +682,6 @@ public class DefaultProtocolHandler implements IProtocolHandler {
         }
         throw new AuthenticationRequiredException(authRealmDiscovered, Activator.getDefault().createErrorStatus(Messages.DefaultProtocolHandler_ERROR_AUTHENTICATION_REQUIRED + errorSuffix, null));
       }
-      /* In case sync authentication failed (Forbidden) */
-      else if (isSyncAuthenticationIssue(response, link)) {
-        abortAndRelease(method);
-        throw new AuthenticationRequiredException(null, Activator.getDefault().createErrorStatus(Messages.DefaultProtocolHandler_GR_ERROR_BAD_AUTH, null));
-      }
-      /* In case of Forbidden Status with Error Code (Google Reader) */
-      else if (statusCode == HTTP_ERROR_FORBIDDEN && response.getFirstHeader(HEADER_RESPONSE_ERROR) != null) {
-        handleForbidden(method, response);
-      }
       /* In case proxy-authentication required / failed */
       else if (statusCode == HTTP_ERROR_PROXY_AUTH_REQUIRED) {
         abortAndRelease(method);
@@ -798,67 +775,6 @@ public class DefaultProtocolHandler implements IProtocolHandler {
       method.abort();
 //      method.releaseConnection();
     }
-  }
-
-  private boolean isSyncAuthenticationIssue(CloseableHttpResponse response, URI link) {
-
-    /* Handle Google Error Response "Forbidden" for synced connections */
-    if (response.getCode() == HTTP_ERROR_FORBIDDEN && SyncUtils.fromGoogle(link.toString())) {
-      Header errorHeader = response.getFirstHeader(HEADER_RESPONSE_ERROR);
-      if (errorHeader == null || ERROR_BAD_AUTH.equals(errorHeader.getValue()))
-        return true;
-    }
-
-    return false;
-  }
-
-  protected void handleForbidden(HttpUriRequestBase method, CloseableHttpResponse response) throws ConnectionException {
-    String errorMsg = null;
-    String errorUrl = null;
-
-    /* Lookup Google Error if present */
-    Header errorHeader = response.getFirstHeader(HEADER_RESPONSE_ERROR);
-    if (errorHeader != null && StringUtils.isSet(errorHeader.getValue())) {
-      String errorCode = errorHeader.getValue();
-      if (ERROR_BAD_AUTH.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_BAD_AUTH;
-      else if (ERROR_NOT_VERIFIED.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_NOT_VERIFIED;
-      else if (ERROR_NO_TERMS.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_NO_TERMS;
-      else if (ERROR_UNKNOWN.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_UNKNOWN;
-      else if (ERROR_ACCOUNT_DELETED.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_ACCOUNT_DELETED;
-      else if (ERROR_ACCOUNT_DISABLED.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_ACCOUNT_DISABLED;
-      else if (ERROR_SERVICE_DISABLED.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_SERVICE_DISABLED;
-      else if (ERROR_SERVICE_UNAVAILABLE.equals(errorCode))
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_SERVICE_UNAVAILABLE;
-      else if (ERROR_CAPTCHA_REQUIRED.equals(errorCode)) {
-        errorMsg = Messages.DefaultProtocolHandler_GR_ERROR_CAPTCHA_REQUIRED;
-        errorUrl = SyncUtils.CAPTCHA_UNLOCK_URL;
-      }
-
-      /* Also look up specified Error URL as necessary */
-      if (errorUrl == null) {
-        Header urlHeader = response.getFirstHeader(HEADER_RESPONSE_URL);
-        if (urlHeader != null && StringUtils.isSet(urlHeader.getValue()))
-          errorUrl = urlHeader.getValue();
-      }
-    }
-
-    /* Otherwise throw generic Forbidden Exception */
-    if (errorMsg == null)
-      errorMsg = Messages.DefaultProtocolHandler_ERROR_FORBIDDEN;
-
-    abortAndRelease(method);
-
-    if (errorUrl != null)
-      throw new SyncConnectionException(errorUrl, Activator.getDefault().createErrorStatus(errorMsg, null));
-
-    throw new ConnectionException(Activator.getDefault().createErrorStatus(errorMsg, null));
   }
 
   /* Some HTTP Error Messages */

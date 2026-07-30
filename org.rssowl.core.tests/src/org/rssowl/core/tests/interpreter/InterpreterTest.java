@@ -32,19 +32,15 @@ import static org.junit.Assert.assertNotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.rssowl.core.Owl;
-import org.rssowl.core.internal.interpreter.json.JSONObject;
 import org.rssowl.core.internal.persist.Feed;
 import org.rssowl.core.interpreter.UnknownFormatException;
 import org.rssowl.core.persist.IAttachment;
 import org.rssowl.core.persist.IFeed;
 import org.rssowl.core.persist.INews;
 import org.rssowl.core.util.DateUtils;
-import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.xml.sax.InputSource;
 
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -1006,82 +1002,5 @@ public class InterpreterTest {
     assertEquals("http://blip.tv/file/get/NostalgiaCritic-BimbosBCCrossover785.m4v", attachment2.getLink().toString());
     assertEquals("video/x-m4v", attachment2.getType());
     assertEquals(217916291, attachment2.getLength());
-  }
-
-  /**
-   * Test an JSON Feed.
-   *
-   * @throws Exception
-   */
-  @Test
-  @SuppressWarnings("nls")
-  public void testJSON() throws Exception {
-    InputStream inS = getClass().getResourceAsStream("/data/interpreter/feed_json.txt");
-    IFeed feed = new Feed(new URI("reader://www.data.interpreter.feed_json.txt"));
-
-    JSONObject obj = new JSONObject(StringUtils.readString(new InputStreamReader(inS, "UTF-8")));
-
-    Owl.getInterpreter().interpretJSONObject(obj, feed);
-
-    assertEquals("RSSOwl News", feed.getTitle());
-    assertEquals("This is the rssowl.org feed", feed.getDescription());
-    assertEquals("http://www.rssowl.org", feed.getHomepage().toString());
-    assertEquals(1307818900000l, feed.getPublishDate().getTime());
-
-    assertEquals(3, feed.getNews().size());
-
-    INews news1 = feed.getNews().get(0);
-    assertEquals("http://www.rssowl.org/node/279", news1.getLink().toString());
-    assertEquals("feed/http://www.rssowl.org/newsfeed", news1.getInReplyTo());
-    assertTrue(SyncUtils.isSynchronized(news1));
-    assertEquals("tag:google.com,2005:reader/item/83514e0c32f4c92b", news1.getGuid().getValue());
-    assertEquals(
-        "We are happy to announce that the beta of RSSOwl 2.1 is now available for download. \nThe 2.1 release comes with some exciting cool new features:\n\n<ul>\n<li>new headlines and list layout</li>\n<li>redesigned newspaper view</li>\n<li>news archiving</li>\n<li>readability support</li>\n<li>instant folder aggregation</li>\n<li>improved performance and reliability</li>\n<li>Full <a href=\"http://wiki.rssowl.org/index.php/2.1_Beta\">Changelog</a></li>\n</ul>\n\n<b>Download for:</b> <a href=\"http://www.rssowl.org/dl/Integration_Build/rssowl-2.1.beta.win32.zip\">Windows</a> | <a href=\"http://www.rssowl.org/dl/Integration_Build/rssowl-2.1.beta.linux.x86.zip\">Linux</a> | <a href=\"http://www.rssowl.org/dl/Integration_Build/rssowl-2.1.beta.linux.x86_64.zip\">Linux 64Bit</a> | <a href=\"http://www.rssowl.org/dl/Integration_Build/rssowl-2.1.beta.macosx.zip\">Mac</a>\n<br><br>\nPlease visit our <a href=\"http://wiki.rssowl.org/index.php/2.1_Beta\">2.1 Beta</a> site for installation instructions and a complete changelog. We welcome every feedback on this release in our <a href=\"https://sourceforge.net/projects/rssowl/forums\">forums</a> or <a href=\"https://sourceforge.net/tracker/?group_id=86683&amp;atid=2238642\">bug tracker</a>.<br><br><a href=\"http://www.rssowl.org/node/279\">Read the full article</a>",
-        news1.getDescription());
-    assertEquals("bpasero", news1.getAuthor().getName());
-    assertEquals("RSSOwl 2.1 Beta available", news1.getTitle());
-    assertEquals(1308564626000l, news1.getPublishDate().getTime());
-
-    assertEquals(1, news1.getAttachments().size());
-    IAttachment attachment = news1.getAttachments().get(0);
-    assertEquals("http://feedproxy.google.com/~r/astronomycast/~5/4TPW83-0h4Y/AstroCast-090921.mp3", attachment.getLink().toString());
-    assertEquals("audio/mpeg", attachment.getType());
-    assertEquals(17610000, attachment.getLength());
-
-    assertEquals(2, news1.getCategories().size());
-    assertEquals("Test 123", news1.getCategories().get(0).getName());
-    assertEquals("Foo Bar", news1.getCategories().get(1).getName());
-
-    assertNotNull(news1.getProperty(SyncUtils.GOOGLE_MARKED_UNREAD));
-    assertNotNull(news1.getProperty(SyncUtils.GOOGLE_MARKED_READ));
-    assertNotNull(news1.getProperty(SyncUtils.GOOGLE_LABELS));
-
-    Object object = news1.getProperty(SyncUtils.GOOGLE_LABELS);
-    assertTrue(object instanceof String[]);
-    assertEquals(2, ((String[]) object).length);
-    int count = 0;
-    for (String str : ((String[]) object)) {
-      if ("RSSOwl Label".equals(str))
-        count++;
-      else if ("Foo".equals(str))
-        count++;
-    }
-    assertEquals(2, count);
-
-    INews news2 = feed.getNews().get(1);
-    assertEquals("http://www.rssowl.org/node/278", news2.getLink().toString());
-    assertEquals("feed/http://www.rssowl.org/newsfeed", news2.getInReplyTo());
-    assertTrue(SyncUtils.isSynchronized(news2));
-    assertEquals("tag:google.com,2005:reader/item/24ecce137a4e42b9", news2.getGuid().getValue());
-    assertEquals("bpasero", news2.getAuthor().getName());
-    assertEquals("RSSOwl 2.1 Changelog", news2.getTitle());
-
-    INews news3 = feed.getNews().get(2);
-    assertEquals("http://www.rssowl.org/node/277", news3.getLink().toString());
-    assertEquals("feed/http://www.rssowl.org/newsfeed", news3.getInReplyTo());
-    assertTrue(SyncUtils.isSynchronized(news3));
-    assertEquals("tag:google.com,2005:reader/item/5c5d5801a50753bd", news3.getGuid().getValue());
-    assertEquals("bpasero", news3.getAuthor().getName());
-    assertEquals("RSSOwl 2.1 is in the making", news3.getTitle());
   }
 }

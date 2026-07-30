@@ -35,7 +35,6 @@ public class Messages extends NLS {
   public static String CleanUpModel_DELETE_BY_VISIT;
   public static String CleanUpModel_DELETE_CON_ERROR;
   public static String CleanUpModel_DELETE_DUPLICATES;
-  public static String CleanUpModel_DELETE_UNSUBSCRIBED_FEEDS;
   public static String CleanUpModel_READ_NEWS;
   public static String CleanUpModel_RECOMMENDED_OPS;
   public static String CleanUpOptionsPage_CHOOSE_OPS;
@@ -50,7 +49,6 @@ public class Messages extends NLS {
   public static String CleanUpOptionsPage_DELETE_DUPLICATES;
   public static String CleanUpOptionsPage_DELETE_NEWS_BY_AGE;
   public static String CleanUpOptionsPage_DELETE_READ;
-  public static String CleanUpOptionsPage_DELETE_UNSUBSCRIBED_FEEDS;
   public static String CleanUpOptionsPage_DONT_DELETE_LABELED;
   public static String CleanUpOptionsPage_DONT_DELETE_UNREAD;
   public static String CleanUpSummaryPage_DESELECT_ALL;

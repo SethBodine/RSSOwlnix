@@ -45,13 +45,11 @@ import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.persist.IBookMark;
 import org.rssowl.core.persist.IEntity;
 import org.rssowl.core.persist.IFolder;
-import org.rssowl.core.persist.IFolderChild;
 import org.rssowl.core.persist.IMark;
 import org.rssowl.core.persist.INewsMark;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.util.CoreUtils;
 import org.rssowl.core.util.RetentionStrategy;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.ui.dialogs.properties.IEntityPropertyPage;
 import org.rssowl.ui.dialogs.properties.IPropertyDialogSite;
 import org.rssowl.ui.internal.Controller;
@@ -156,8 +154,6 @@ public class RetentionPropertyPage implements IEntityPropertyPage {
    */
   @Override
   public Control createContents(Composite parent) {
-    boolean isSynchronized = isSynchronized(fEntities);
-
     Composite container = new Composite(parent, SWT.NONE);
     container.setLayout(LayoutUtils.createGridLayout(2, 10, 10, 5, 5, false));
 
@@ -170,7 +166,7 @@ public class RetentionPropertyPage implements IEntityPropertyPage {
     fDeleteNewsByCountCheck = new Button(container, SWT.CHECK);
     fDeleteNewsByCountCheck.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
     fDeleteNewsByCountCheck.setSelection(fPrefDeleteNewsByCountState);
-    fDeleteNewsByCountCheck.setText(isSynchronized ? Messages.RetentionPropertyPage_MAX_NUMBER_SYNCHRONIZED : Messages.RetentionPropertyPage_MAX_NUMBER);
+    fDeleteNewsByCountCheck.setText(Messages.RetentionPropertyPage_MAX_NUMBER);
     fDeleteNewsByCountCheck.addSelectionListener(new SelectionAdapter() {
       @Override
       public void widgetSelected(SelectionEvent e) {
@@ -189,7 +185,7 @@ public class RetentionPropertyPage implements IEntityPropertyPage {
     fDeleteNewsByAgeCheck = new Button(container, SWT.CHECK);
     fDeleteNewsByAgeCheck.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
     fDeleteNewsByAgeCheck.setSelection(fPrefDeleteNewsByAgeState);
-    fDeleteNewsByAgeCheck.setText(isSynchronized ? Messages.RetentionPropertyPage_MAX_AGE_SYNCHRONIZED : Messages.RetentionPropertyPage_MAX_AGE);
+    fDeleteNewsByAgeCheck.setText(Messages.RetentionPropertyPage_MAX_AGE);
     fDeleteNewsByAgeCheck.addSelectionListener(new SelectionAdapter() {
       @Override
       public void widgetSelected(SelectionEvent e) {
@@ -237,56 +233,6 @@ public class RetentionPropertyPage implements IEntityPropertyPage {
     infoText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
     return container;
-  }
-
-  private boolean isSynchronized(List<IEntity> entities) {
-    for (IEntity entity : entities) {
-
-      /* Folder */
-      if (entity instanceof IFolder) {
-        IFolder folder = (IFolder) entity;
-        if (!isSynchronized(folder))
-          return false;
-      }
-
-      /* Bookmark */
-      else if (entity instanceof IBookMark) {
-        IBookMark bm = (IBookMark) entity;
-        if (!SyncUtils.isSynchronized(bm))
-          return false;
-      }
-
-      /* Anything Else */
-      else
-        return false;
-    }
-
-    return true;
-  }
-
-  private boolean isSynchronized(IFolder folder) {
-    for (IFolderChild child : folder.getChildren()) {
-
-      /* Folder */
-      if (child instanceof IFolder) {
-        IFolder childFolder = (IFolder) child;
-        if (!isSynchronized(childFolder))
-          return false;
-      }
-
-      /* Bookmark */
-      else if (child instanceof IBookMark) {
-        IBookMark bm = (IBookMark) child;
-        if (!SyncUtils.isSynchronized(bm))
-          return false;
-      }
-
-      /* Anything Else */
-      else
-        return false;
-    }
-
-    return true;
   }
 
   /*

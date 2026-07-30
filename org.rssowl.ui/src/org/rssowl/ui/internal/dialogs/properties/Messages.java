@@ -74,9 +74,7 @@ public class Messages extends NLS {
   public static String InformationPropertyPage_LAST_UPDATE;
   public static String InformationPropertyPage_LAST_VISITED;
   public static String InformationPropertyPage_LOAD_FAILED_REASON;
-  public static String InformationPropertyPage_LOAD_FAILED_REASON_SYNCED;
   public static String InformationPropertyPage_LOAD_FAILED_UNKNOWN;
-  public static String InformationPropertyPage_LOAD_FAILED_UNKNOWN_SYNCED;
   public static String InformationPropertyPage_LOADED_OK;
   public static String InformationPropertyPage_N_NEW;
   public static String InformationPropertyPage_N_NEW_UNREAD;
@@ -90,11 +88,9 @@ public class Messages extends NLS {
   public static String InformationPropertyPage_NEWSBINS;
   public static String InformationPropertyPage_NONE;
   public static String InformationPropertyPage_NOT_LOADED;
-  public static String InformationPropertyPage_NOT_SYNCED;
   public static String InformationPropertyPage_POPULARITY;
   public static String InformationPropertyPage_SEARCHES;
   public static String InformationPropertyPage_STATUS;
-  public static String InformationPropertyPage_SYNCED_OK;
   public static String ReadingPropertyPage_MARK_READ_AFTER;
   public static String ReadingPropertyPage_MARK_READ_ON_CLOSE;
   public static String ReadingPropertyPage_MARK_READ_ON_MINIMIZE;
@@ -106,9 +102,7 @@ public class Messages extends NLS {
   public static String RetentionPropertyPage_DELETE_READ;
   public static String RetentionPropertyPage_DELETE_UNREAD;
   public static String RetentionPropertyPage_MAX_AGE;
-  public static String RetentionPropertyPage_MAX_AGE_SYNCHRONIZED;
   public static String RetentionPropertyPage_MAX_NUMBER;
-  public static String RetentionPropertyPage_MAX_NUMBER_SYNCHRONIZED;
   public static String RetentionPropertyPage_NEVER_DELETE_LABELED;
   public static String RetentionPropertyPage_PERFORMING_CLEANUP;
   public static String SearchMarkPropertyPage_ADD_TO_ALL;

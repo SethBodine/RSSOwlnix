@@ -50,7 +50,6 @@ import org.rssowl.core.persist.INewsBin;
 import org.rssowl.core.persist.INewsMark;
 import org.rssowl.core.persist.ISearchMark;
 import org.rssowl.core.util.StringUtils;
-import org.rssowl.core.util.SyncUtils;
 import org.rssowl.core.util.URIUtils;
 import org.rssowl.ui.dialogs.properties.IEntityPropertyPage;
 import org.rssowl.ui.dialogs.properties.IPropertyDialogSite;
@@ -189,7 +188,6 @@ public class InformationPropertyPage implements IEntityPropertyPage {
   }
 
   private void fillBookMarkInfo(final IBookMark bm) {
-    boolean isSynchronized = SyncUtils.isSynchronized(bm);
     String message;
 
     /* Status */
@@ -199,18 +197,18 @@ public class InformationPropertyPage implements IEntityPropertyPage {
     if (bm.isErrorLoading()) {
       message = (String) bm.getProperty(Controller.LOAD_ERROR_KEY);
       if (!StringUtils.isSet(message))
-        message = isSynchronized ? Messages.InformationPropertyPage_LOAD_FAILED_UNKNOWN_SYNCED : Messages.InformationPropertyPage_LOAD_FAILED_UNKNOWN;
+        message = Messages.InformationPropertyPage_LOAD_FAILED_UNKNOWN;
       else
-        message = isSynchronized ? NLS.bind(Messages.InformationPropertyPage_LOAD_FAILED_REASON_SYNCED, message) : NLS.bind(Messages.InformationPropertyPage_LOAD_FAILED_REASON, message);
+        message = NLS.bind(Messages.InformationPropertyPage_LOAD_FAILED_REASON, message);
     }
 
     /* Never Loaded */
     else if (bm.getLastRecentNewsDate() == null)
-      message = isSynchronized ? Messages.InformationPropertyPage_NOT_SYNCED : Messages.InformationPropertyPage_NOT_LOADED;
+      message = Messages.InformationPropertyPage_NOT_LOADED;
 
     /* Successfully Loaded */
     else
-      message = isSynchronized ? Messages.InformationPropertyPage_SYNCED_OK : Messages.InformationPropertyPage_LOADED_OK;
+      message = Messages.InformationPropertyPage_LOADED_OK;
 
     Label msgLabel = new Label(fContainer, SWT.WRAP);
     msgLabel.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
@@ -232,8 +230,6 @@ public class InformationPropertyPage implements IEntityPropertyPage {
             Object errorLink = bm.getProperty(Controller.LOAD_ERROR_LINK_KEY);
             if (errorLink != null)
               uri = new URI(errorLink.toString());
-            else if (SyncUtils.isSynchronized(bm))
-              uri = new URI(SyncUtils.GOOGLE_READER_URL);
             else
               uri = new URI("https://validator.w3.org/feed/check.cgi?url=" + URIUtils.urlEncode(URIUtils.toHTTP(bm.getFeedLinkReference().getLinkAsText()))); //$NON-NLS-1$
 

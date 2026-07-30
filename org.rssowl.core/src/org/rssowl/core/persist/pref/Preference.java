@@ -271,9 +271,6 @@ public enum Preference {
   /** Global: Clean Up: Delete BMs with a connection error */
   CLEAN_UP_BM_BY_CON_ERROR("org.rssowl.pref.CleanUpBMByConError", IPreferenceType.BOOLEAN), //$NON-NLS-1$
 
-  /** Global: Clean Up: Delete BMs no longer subscribed to in Google Reader */
-  CLEAN_UP_BM_BY_SYNCHRONIZATION("org.rssowl.pref.CleanUpBMBySynchronization", IPreferenceType.BOOLEAN), //$NON-NLS-1$
-
   /** Global: Clean Up: Delete duplicate BMs */
   CLEAN_UP_BM_BY_DUPLICATES("org.rssowl.pref.CleanUpBMByDuplicates", IPreferenceType.BOOLEAN), //$NON-NLS-1$
 
