@@ -69,7 +69,73 @@
     (`https://name.substack.com/feed`); there is no site-wide search-by-
     keyword RSS endpoint to substitute `[:]` into.
 
+- **Added community language packs (10 languages) as a P2 NLS update site**
+  Bundles the 10 complete `rssowl/translation-*` community translations
+  (Danish, German, Spanish, French, Italian, Polish, Portuguese, Serbian,
+  Simplified Chinese, Traditional Chinese) as Tycho-buildable NLS
+  fragments under `translations/`, wired into the previously-empty
+  `releng/update-nls` P2 site. Publishes to `update/nls` on the existing
+  gh-pages workflow; also addable via a new lightweight
+  `publish-nls.yml` workflow that rebuilds and republishes just the
+  language packs (`mvn -pl translations,releng/update-nls -am`) on any
+  push to `main` touching translation content, without running the full
+  multi-platform product build.
+
+  - `translations/<lang>/org.rssowl.{core,ui}.nls.<lang>`: NLS fragments
+    mirroring the host bundles' package structure, built via
+    `tycho-pomless`. Each leaf module's `build.properties` sets
+    `tycho.pomless.parent = ../../pom.xml`, since the `<lang>/`
+    grouping directory is one level deeper than tycho-pomless's default
+    one-level-up parent lookup expects and isn't itself a recognized
+    pomless-aggregation folder name
+  - `translations/<lang>/org.rssowl.feature.nls.<lang>`: wraps each
+    language's two fragments into one installable P2 feature
+  - `releng/update-nls/category.xml`: now lists all 10 language features
+    (was an empty placeholder)
+  - Translated the 24 keys added since the original 2.1.2 translations
+    (regex search conditions, the day-threshold feed filter, grouping by
+    recency, page size, the new "Install Language Packs..." menu item)
+    plus remaining pre-existing gaps in `es`/`fr`/`it`/`zh_TW`, bringing
+    all 10 languages to 100% key coverage. These added lines are marked
+    inline (`# machine-drafted, needs native-speaker review`) and are
+    not a substitute for native-speaker review - see `TRANSLATING.md`.
+  - `tools/generate-nls-status.sh`, `tools/prune-dead-translation-keys.sh`,
+    `tools/find-missing-translations.sh`: ongoing maintenance scripts
+  - `.github/workflows/translations-check.yml`: PR-scoped encoding/key
+    validation and coverage comment, without running the full product
+    build
+  - `TRANSLATING.md`: contributor guide for adding or updating a
+    language
+
+- **Added an in-app entry point for installing language packs**
+  The three P2 repositories (program/nls/addons) were already registered
+  via `<repositories>` in `releng/product/rssowlnix.product`, and the p2
+  install UI bundles (`org.eclipse.equinox.p2.ui.sdk` and friends) were
+  already part of the product via the `org.rssowl.dependencies.updater`
+  root feature - but nothing in the running app ever opened that UI.
+  `org.rssowl.ui.actions.FindUpdates`/`.FindExtensions` were defined in
+  `plugin.xml`/`plugin.eclipse.xml` but never wired to a handler, and
+  `ApplicationActionBarAdvisor.createHelpMenu()` was fully hand-built
+  with no "Install New Software..." equivalent. Added a
+  "&Install Language Packs..." Help menu action calling
+  `ProvisioningUI.getDefaultUI().openInstallWizard(null, null, null)`,
+  which opens the standard p2 install wizard in repository-browse mode
+  (per the Eclipse API: passing `null` for the operation means "let the
+  user browse the repositories" rather than a fixed install list),
+  defaulting to "-- All Available Sites --" where the registered `nls`
+  site's language packs now appear. `org.eclipse.equinox.p2.ui` added to
+  `org.rssowl.ui`'s `Require-Bundle` as `resolution:=optional`.
+
 ### Removed
+
+- **Removed ~700 dead keys from the bundled language pack translations**
+  The community translations bundled above (see Added) carried forward
+  keys for functionality no longer in this fork's English source -
+  mostly the old Google Reader integration strings, consistent with the
+  Google Reader removal below. Cleaned via the new
+  `tools/prune-dead-translation-keys.sh`, re-verified coverage was
+  unaffected (same percentages before/after against current English
+  source).
 
 - **Finished removing Google Reader / synchronization code from core, UI, and tests**
   Follow-up to the previous pass, which was scoped to `org.rssowl.ui`.
