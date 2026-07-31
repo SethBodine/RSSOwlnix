@@ -1,0 +1,127 @@
+name: Translations Check
+
+on:
+  pull_request:
+    paths:
+      - 'translations/**'
+      - 'org.rssowl.core/**/messages.properties'
+      - 'org.rssowl.ui/**/messages.properties'
+      - 'tools/generate-nls-status.sh'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate translation files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Check .properties encoding (must be Latin-1 / ISO-8859-1)
+        run: |
+          fail=0
+          while IFS= read -r -d '' f; do
+            if ! iconv -f ISO-8859-1 -t UTF-8 "$f" > /dev/null 2>&1; then
+              echo "::error file=$f::not valid ISO-8859-1 (Java .properties encoding) — run native2ascii before committing"
+              fail=1
+            fi
+          done < <(find translations -name '*.properties' -print0)
+          exit $fail
+
+      - name: Check for stray/unknown keys in changed files only
+        # Scoped to files this PR actually touches. The bundled upstream
+        # translations carry ~700 pre-existing dead keys (mostly leftover
+        # Google Reader integration strings that no longer exist in
+        # English source) — those are handled by the one-off
+        # prune-dead-translation-keys.sh cleanup, not flagged here on
+        # every unrelated PR.
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'translations/**/messages_*.properties')"
+          if [[ -z "$changed" ]]; then
+            echo "No translation files changed in this PR."
+            exit 0
+          fi
+          fail=0
+          while IFS= read -r tf; do
+            [[ -f "$tf" ]] || continue  # skip deleted files
+            rel="$(dirname "$tf")"
+            pkg_path="${rel#translations/*/org.rssowl.*.nls.*/}"
+            en_file=""
+            for host in org.rssowl.core org.rssowl.ui; do
+              candidate="${host}/src/${pkg_path}/messages.properties"
+              [[ -f "$candidate" ]] && en_file="$candidate"
+            done
+            if [[ -z "$en_file" ]]; then
+              echo "::warning file=$tf::no matching English messages.properties found for this path — orphaned fragment file?"
+              continue
+            fi
+            en_keys="$(grep -aE '^[A-Za-z0-9_.]+[[:space:]]*=' "$en_file" | sed -E 's/^([A-Za-z0-9_.]+).*/\1/')"
+            tr_keys="$(grep -aE '^[A-Za-z0-9_.]+[[:space:]]*=' "$tf" | sed -E 's/^([A-Za-z0-9_.]+).*/\1/')"
+            while IFS= read -r k || [[ -n "$k" ]]; do
+              [[ -z "$k" ]] && continue
+              if ! grep -qxF "$k" <<< "$en_keys"; then
+                echo "::error file=$tf::key '$k' has no matching key in $en_file — typo, or a key that no longer exists"
+                fail=1
+              fi
+            done <<< "$tr_keys"
+          done <<< "$changed"
+          exit $fail
+
+      - name: Build translations reactor only
+        run: |
+          mvn -B verify -pl translations -amd \
+            -DskipTests --no-transfer-progress \
+            -Dmaven.wagon.http.retryHandler.count=3
+        env:
+          MAVEN_OPTS: "-Xmx1g -XX:+UseParallelGC"
+
+      - name: Generate coverage report
+        run: |
+          chmod +x tools/generate-nls-status.sh
+          ./tools/generate-nls-status.sh
+
+      - name: Post coverage to job summary
+        run: cat status.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment coverage on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('status.md', 'utf8');
+            const marker = '<!-- nls-coverage-comment -->';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            const commentBody = `${marker}\n${body}`;
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody,
+              });
+            }

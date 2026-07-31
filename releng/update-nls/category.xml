@@ -1,8 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <!-- Language pack features will be listed here when available.
-        This repository is intentionally empty and exists to prevent
-        P2 client errors when checking for installed software sites. -->
+   <feature url="features/org.rssowl.feature.nls.da_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.da" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.de_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.de" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.es_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.es" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.fr_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.fr" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.it_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.it" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.pl_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.pl" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.pt_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.pt" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.sr_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.sr" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.zhcn_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.zhcn" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
+   <feature url="features/org.rssowl.feature.nls.zhtw_2.10.4.qualifier.jar" id="org.rssowl.feature.nls.zhtw" version="2.10.4.qualifier">
+      <category name="rssowlnix.nls"/>
+   </feature>
    <category-def name="rssowlnix.nls" label="RSSOwlnix Language Packs"/>
 </site>
-

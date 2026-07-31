@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.rssowl.feature.nls.pt"
+      label="Portuguese Language Pack"
+      version="2.10.4.qualifier"
+      provider-name="RSSOwlnix">
+
+   <description>
+      Portuguese translation of RSSOwlnix. Community-contributed;
+      strings not yet translated fall back to English automatically.
+   </description>
+
+   <copyright>
+      Copyright (c) 2005-2011 RSSOwl Development Team, (c) 2024- RSSOwlnix contributors.
+      Licensed under the Eclipse Public License v1.0.
+   </copyright>
+
+   <license url="http://www.rssowl.org/legal/epl-v10.html">
+      Eclipse Public License - v 1.0
+   </license>
+
+   <requires>
+      <import plugin="org.rssowl.core" version="2.10.4" match="greaterOrEqual"/>
+      <import plugin="org.rssowl.ui" version="2.10.4" match="greaterOrEqual"/>
+   </requires>
+
+   <plugin
+         id="org.rssowl.core.nls.pt"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         fragment="true"
+         unpack="false"/>
+
+   <plugin
+         id="org.rssowl.ui.nls.pt"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         fragment="true"
+         unpack="false"/>
+
+</feature>

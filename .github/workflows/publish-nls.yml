@@ -1,0 +1,96 @@
+name: Publish Language Packs
+
+# Publishes releng/update-nls to update/nls on gh-pages WITHOUT running
+# the full multi-platform product build/release. build-all-platforms.yml
+# only reaches that publish step after building Windows/Linux/macOS
+# products and running tests — this workflow builds just the translations
+# reactor + the update-nls P2 repository (via `mvn -pl ... -am`, so Maven
+# still resolves whatever those two actually depend on, just nothing
+# more), which is enough to regenerate and publish the language pack site.
+#
+# Triggers on any push to main that touches translation content, or
+# manually. A tagged release still republishes this site too (via
+# build-all-platforms.yml) — that's intentional redundancy, not a
+# conflict: both write the same content to the same destination with
+# keep_files: true, so whichever runs last just re-confirms the same
+# state.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'translations/**'
+      - 'releng/update-nls/**'
+      - 'org.rssowl.core/**/messages.properties'
+      - 'org.rssowl.ui/**/messages.properties'
+      - 'tools/generate-nls-status.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Serialize against build-all-platforms.yml's gh-pages deploy so the two
+# workflows never write to the same branch at the same time.
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  publish-nls:
+    name: Build and publish NLS update site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache Tycho p2 repository
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository/p2
+          key: tycho-p2-${{ hashFiles('releng/target_platform/target_platform.target') }}
+          restore-keys: |
+            tycho-p2-
+
+      - name: Build translations + update-nls reactor only
+        run: |
+          for attempt in 1 2 3; do
+            echo "=== Build attempt $attempt ==="
+            mvn -B clean verify \
+              -pl translations,releng/update-nls -am \
+              -DskipTests \
+              --no-transfer-progress \
+              -Dmaven.wagon.http.retryHandler.count=3 \
+              -Dmaven.wagon.http.retryHandler.requestSentRetryEnabled=true \
+              -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 \
+              -Dmaven.wagon.rto=120000 && break
+            if [ $attempt -eq 3 ]; then
+              echo "All 3 attempts failed"
+              exit 1
+            fi
+            echo "Attempt $attempt failed, waiting 30s before retry..."
+            sleep 30
+          done
+
+      - name: Generate translation coverage status.json
+        run: |
+          chmod +x tools/generate-nls-status.sh
+          ./tools/generate-nls-status.sh
+          cp status.json releng/update-nls/target/repository/status.json
+
+      - name: Deploy nls update site to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: releng/update-nls/target/repository
+          destination_dir: update/nls
+          keep_files: true

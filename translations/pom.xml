@@ -1,0 +1,58 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>rssowlnix</groupId>
+	<artifactId>translations</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<parent>
+		<groupId>rssowlnix</groupId>
+		<artifactId>root</artifactId>
+		<version>1.0.0-SNAPSHOT</version>
+	</parent>
+
+	<modules>
+		<module>da/org.rssowl.core.nls.da</module>
+		<module>da/org.rssowl.ui.nls.da</module>
+		<module>da/org.rssowl.feature.nls.da</module>
+
+		<module>de/org.rssowl.core.nls.de</module>
+		<module>de/org.rssowl.ui.nls.de</module>
+		<module>de/org.rssowl.feature.nls.de</module>
+
+		<module>es/org.rssowl.core.nls.es</module>
+		<module>es/org.rssowl.ui.nls.es</module>
+		<module>es/org.rssowl.feature.nls.es</module>
+
+		<module>fr/org.rssowl.core.nls.fr</module>
+		<module>fr/org.rssowl.ui.nls.fr</module>
+		<module>fr/org.rssowl.feature.nls.fr</module>
+
+		<module>it/org.rssowl.core.nls.it</module>
+		<module>it/org.rssowl.ui.nls.it</module>
+		<module>it/org.rssowl.feature.nls.it</module>
+
+		<module>pl/org.rssowl.core.nls.pl</module>
+		<module>pl/org.rssowl.ui.nls.pl</module>
+		<module>pl/org.rssowl.feature.nls.pl</module>
+
+		<module>pt/org.rssowl.core.nls.pt</module>
+		<module>pt/org.rssowl.ui.nls.pt</module>
+		<module>pt/org.rssowl.feature.nls.pt</module>
+
+		<module>sr/org.rssowl.core.nls.sr</module>
+		<module>sr/org.rssowl.ui.nls.sr</module>
+		<module>sr/org.rssowl.feature.nls.sr</module>
+
+		<module>zh_CN/org.rssowl.core.nls.zhcn</module>
+		<module>zh_CN/org.rssowl.ui.nls.zhcn</module>
+		<module>zh_CN/org.rssowl.feature.nls.zhcn</module>
+
+		<module>zh_TW/org.rssowl.core.nls.zhtw</module>
+		<module>zh_TW/org.rssowl.ui.nls.zhtw</module>
+		<module>zh_TW/org.rssowl.feature.nls.zhtw</module>
+	</modules>
+
+</project>

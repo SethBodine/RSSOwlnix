@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Polish Translation
+Bundle-SymbolicName: org.rssowl.ui.nls.pl;singleton:=true
+Bundle-Version: 2.10.4.qualifier
+Fragment-Host: org.rssowl.ui;bundle-version="[2.10.4,2.10.5)"
+Bundle-Vendor: RSSOwlnix

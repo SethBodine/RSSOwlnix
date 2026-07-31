@@ -1536,6 +1536,33 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor {
 
     helpMenu.add(new Separator());
 
+    /* Install Language Packs (and other add-ons / updates) */
+    helpMenu.add(new Action(Messages.ApplicationActionBarAdvisor_INSTALL_LANGUAGE_PACKS) {
+      @Override
+      public void run() {
+        try {
+          /*
+           * Opens the standard Eclipse p2 Install wizard. The "RSSOwlnix
+           * Language Packs" repository (and Updates / Add-ons) is already
+           * registered via the <repositories> block in
+           * releng/product/rssowlnix.product, so it shows up in the
+           * wizard's "Work with:" dropdown without the user typing a URL.
+           */
+          org.eclipse.equinox.p2.ui.ProvisioningUI.getDefaultUI().openInstallWizard(null, null, null);
+        } catch (LinkageError e) {
+          /*
+           * org.eclipse.equinox.p2.ui is an optional dependency (see
+           * MANIFEST.MF) so a build that strips p2 entirely doesn't fail to
+           * resolve org.rssowl.ui - this is the defensive fallback for
+           * that case.
+           */
+          Activator.getDefault().logError(e.getMessage(), e);
+        }
+      }
+    });
+
+    helpMenu.add(new Separator());
+
     helpMenu.add(new Separator());
     helpMenu.add(new GroupMarker(IWorkbenchActionConstants.HELP_END));
     helpMenu.add(new Separator());
