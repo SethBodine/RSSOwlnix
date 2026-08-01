@@ -9,7 +9,9 @@ Require-Bundle: org.rssowl.core,
  org.eclipse.core.runtime,
  org.eclipse.core.jobs,
  org.eclipse.ui,
- org.eclipse.equinox.p2.ui;resolution:=optional
+ org.eclipse.equinox.p2.ui;resolution:=optional,
+ org.eclipse.equinox.p2.metadata;resolution:=optional,
+ org.eclipse.equinox.p2.operations;resolution:=optional
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Bundle-ClassPath: .

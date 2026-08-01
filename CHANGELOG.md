@@ -125,8 +125,15 @@
   (per the Eclipse API: passing `null` for the operation means "let the
   user browse the repositories" rather than a fixed install list),
   defaulting to "-- All Available Sites --" where the registered `nls`
-  site's language packs now appear. `org.eclipse.equinox.p2.ui` added to
-  `org.rssowl.ui`'s `Require-Bundle` as `resolution:=optional`.
+  site's language packs now appear. `org.eclipse.equinox.p2.ui`,
+  `org.eclipse.equinox.p2.metadata`, and `org.eclipse.equinox.p2.operations`
+  added to `org.rssowl.ui`'s `Require-Bundle`, all `resolution:=optional`
+  (the latter two needed at compile time because they declare
+  `IInstallableUnit` and `InstallOperation`, types referenced in the
+  `openInstallWizard` method signature even though not named directly
+  in our own code; both are already part of the installed product via
+  `org.rssowl.feature.dependencies.updater`, so this only affects the
+  compile-time classpath, not what ships).
 
 ### Removed
 
