@@ -81,14 +81,16 @@
   push to `main` touching translation content, without running the full
   multi-platform product build.
 
-  - `translations/<lang>/org.rssowl.{core,ui}.nls.<lang>`: NLS fragments
+  - `translations/org.rssowl.{core,ui}.nls.<code>`: NLS fragments
     mirroring the host bundles' package structure, built via
-    `tycho-pomless`. Each leaf module's `build.properties` sets
-    `tycho.pomless.parent = ../../pom.xml`, since the `<lang>/`
-    grouping directory is one level deeper than tycho-pomless's default
-    one-level-up parent lookup expects and isn't itself a recognized
-    pomless-aggregation folder name
-  - `translations/<lang>/org.rssowl.feature.nls.<lang>`: wraps each
+    `tycho-pomless`, flat directly under `translations/` (no
+    per-language grouping folder) matching `bundles/`/`features/` -
+    `.mvn/extensions.xml` pins `org.eclipse.tycho.extras:tycho-pomless`
+    at 1.1.0, which predates Tycho's pomless update-site/product support
+    added in 1.5 and does not support the newer `tycho.pomless.parent`
+    build.properties override, so any extra directory level between a
+    module and its parent POM breaks parent resolution entirely
+  - `translations/org.rssowl.feature.nls.<code>`: wraps each
     language's two fragments into one installable P2 feature
   - `releng/update-nls/category.xml`: now lists all 10 language features
     (was an empty placeholder)

@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # generate-nls-status.sh
 #
-# Walks translations/<lang>/org.rssowl.{core,ui}.nls.<code>/ against the
-# current English org.rssowl.core / org.rssowl.ui messages.properties
+# Walks translations/org.rssowl.{core,ui}.nls.<code>/ (flat - no
+# per-language grouping folder; tycho-pomless 1.1.0, as pinned in
+# .mvn/extensions.xml, only resolves a pomless module's parent one
+# directory level up with no override, so every module needs to sit
+# directly under translations/, matching bundles/ and features/) against
+# the current English org.rssowl.core / org.rssowl.ui messages.properties
 # files and computes per-language coverage.
 #
 # Usage:
@@ -26,6 +30,24 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TRANSLATIONS_DIR="${REPO_ROOT}/translations"
 FAIL_UNDER=""
+
+# display-code:folder-suffix:properties-suffix
+# folder-suffix is what's used in org.rssowl.{core,ui}.nls.<folder-suffix>
+# properties-suffix is the Java locale suffix in messages_<suffix>.properties
+# (differs from folder-suffix for the two Chinese variants: folders use
+# "zhcn"/"zhtw", but Java properties use the real locale "zh_CN"/"zh_TW")
+LANGS=(
+  "da:da:da"
+  "de:de:de"
+  "es:es:es"
+  "fr:fr:fr"
+  "it:it:it"
+  "pl:pl:pl"
+  "pt:pt:pt"
+  "sr:sr:sr"
+  "zh_CN:zhcn:zh_CN"
+  "zh_TW:zhtw:zh_TW"
+)
 
 # Languages considered "fully supported" — i.e. the ones the project
 # promises to keep at high coverage. Add a language here once a maintainer
@@ -56,9 +78,7 @@ is_supported() {
 
 # total English key count (denominator, same for every language)
 total_en_keys=0
-declare -A en_keys_by_relpath
 while IFS= read -r -d '' en_file; do
-  rel="${en_file#${REPO_ROOT}/}"
   keys="$(extract_keys "$en_file")"
   count="$(echo "$keys" | grep -c . || true)"
   total_en_keys=$((total_en_keys + count))
@@ -68,22 +88,26 @@ done < <(find "${REPO_ROOT}/org.rssowl.core" "${REPO_ROOT}/org.rssowl.ui" \
 json_entries=()
 md_rows=()
 worst_supported_pct=100
-any_fail=0
 
 if [[ -d "${TRANSLATIONS_DIR}" ]]; then
-  for lang_dir in "${TRANSLATIONS_DIR}"/*/; do
-    lang="$(basename "${lang_dir}")"
-    [[ "$lang" == "pom.xml" ]] && continue
+  for entry in "${LANGS[@]}"; do
+    lang="${entry%%:*}"
+    rest="${entry#*:}"
+    folder_suffix="${rest%%:*}"
+    props_suffix="${rest#*:}"
+
+    core_dir="${TRANSLATIONS_DIR}/org.rssowl.core.nls.${folder_suffix}"
+    ui_dir="${TRANSLATIONS_DIR}/org.rssowl.ui.nls.${folder_suffix}"
 
     missing=0
     while IFS= read -r -d '' en_file; do
       rel_from_src="${en_file#*/src/}"
       pkg_dir="$(dirname "${rel_from_src}")"
-      suffix="${lang}"
-      translated_file="$(find "${lang_dir}" -type f \
-          -path "*/${pkg_dir}/messages_${suffix}.properties" 2>/dev/null | head -n1 || true)"
+      host_dir="${core_dir}"
+      [[ "${en_file}" == *"/org.rssowl.ui/"* ]] && host_dir="${ui_dir}"
+      translated_file="${host_dir}/${pkg_dir}/messages_${props_suffix}.properties"
       en_keys="$(extract_keys "${en_file}" | sort -u)"
-      tr_keys="$(extract_keys "${translated_file:-/dev/null}" | sort -u)"
+      tr_keys="$(extract_keys "${translated_file}" | sort -u)"
       m="$(comm -23 <(echo "${en_keys}") <(echo "${tr_keys}") | grep -c . || true)"
       missing=$((missing + m))
     done < <(find "${REPO_ROOT}/org.rssowl.core" "${REPO_ROOT}/org.rssowl.ui" \

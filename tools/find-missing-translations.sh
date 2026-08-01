@@ -9,10 +9,14 @@
 #
 #        ./find-missing-translations.sh de
 #
-#      Looks for translations under translations/de/ (adjust
-#      TRANSLATIONS_DIR below if your layout differs) and reports every
-#      key present in an English messages.properties file that has no
-#      corresponding key in the matching messages_de.properties file.
+#      Searches translations/ (flat: org.rssowl.{core,ui,feature}.nls.<code>/
+#      directly under translations/, no per-language grouping folder —
+#      tycho-pomless 1.1.0, as pinned in .mvn/extensions.xml, only resolves
+#      a pomless module's parent one directory level up with no override,
+#      so translations/ has to be flat like bundles/ and features/) for
+#      messages_de.properties files and reports every key present in an
+#      English messages.properties file that has no corresponding key
+#      there.
 #
 #   2) Baseline-diff mode — find keys added to English source since a
 #      given git ref (e.g. the upstream 2.1.2 tag), useful for figuring
@@ -81,11 +85,16 @@ mode_since() {
 
 mode_lang() {
   local lang="$1"
-  local lang_dir="${TRANSLATIONS_DIR}/${lang}"
 
-  if [[ ! -d "${lang_dir}" ]]; then
-    echo "No translations/${lang}/ directory found. Is the language code right," >&2
-    echo "and does TRANSLATIONS_DIR point at the right place in this repo?" >&2
+  if [[ ! -d "${TRANSLATIONS_DIR}" ]]; then
+    echo "No translations/ directory found. Does TRANSLATIONS_DIR point at" >&2
+    echo "the right place in this repo?" >&2
+    exit 1
+  fi
+
+  if ! find "${TRANSLATIONS_DIR}" -type f -name "messages_${lang}.properties" -print -quit 2>/dev/null | grep -q .; then
+    echo "No messages_${lang}.properties files found anywhere under translations/." >&2
+    echo "Is '${lang}' the right properties-file suffix? (e.g. zh_CN, not zhcn)" >&2
     exit 1
   fi
 
@@ -94,14 +103,15 @@ mode_lang() {
   # Every English messages.properties under org.rssowl.core and org.rssowl.ui
   while IFS= read -r -d '' en_file; do
     # Derive the matching translated file path: same package path, but
-    # inside the language's fragment folder and with the language suffix.
+    # inside a translations/org.rssowl.*.nls.<code>/ module and with the
+    # language suffix.
     rel_from_src="${en_file#*/src/}"          # e.g. org/rssowl/ui/internal/messages.properties
     pkg_dir="$(dirname "${rel_from_src}")"
 
-    # Try to find the matching fragment file anywhere under lang_dir with
-    # the matching package path, regardless of which fragment module it's
-    # nested in (core vs ui vs feature).
-    translated_file="$(find "${lang_dir}" -type f \
+    # Search the whole flat translations/ tree for the matching fragment
+    # file — the messages_<lang>.properties filename itself disambiguates
+    # language, so no per-language directory lookup is needed.
+    translated_file="$(find "${TRANSLATIONS_DIR}" -type f \
         -path "*/${pkg_dir}/messages_${lang}.properties" 2>/dev/null | head -n1 || true)"
 
     en_keys="$(extract_keys "${en_file}" "${en_file}" | sed 's/^[^:]*:://')"

@@ -3,9 +3,13 @@
 #
 # Removes key=value lines from translations/**/messages_*.properties that
 # have no matching key anywhere in the current English source
-# (org.rssowl.core, org.rssowl.ui). These are almost always leftovers from
-# removed features (e.g. the old Google Reader integration, which no
-# longer exists in this fork) rather than typos — run this once after
+# (org.rssowl.core, org.rssowl.ui). translations/ is flat -
+# org.rssowl.{core,ui,feature}.nls.<code>/ directly under translations/,
+# no per-language grouping folder (tycho-pomless 1.1.0, as pinned in
+# .mvn/extensions.xml, only resolves a pomless module's parent one
+# directory level up with no override). These dead keys are almost
+# always leftovers from removed features (e.g. the old Google Reader
+# integration, which no longer exists in this fork) rather than typos — run this once after
 # bundling upstream translations, then rely on CI (translations-check.yml)
 # to catch anything new going forward.
 #
@@ -20,7 +24,7 @@ total_removed=0
 while IFS= read -r -d '' tf; do
   rel="$(dirname "$tf")"
   rel="${rel#${REPO_ROOT}/}"
-  pkg_path="${rel#translations/*/org.rssowl.*.nls.*/}"
+  pkg_path="${rel#translations/org.rssowl.*.nls.*/}"
   en_file=""
   for host in org.rssowl.core org.rssowl.ui; do
     candidate="${REPO_ROOT}/${host}/src/${pkg_path}/messages.properties"

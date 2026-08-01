@@ -2,7 +2,7 @@
 
 RSSOwlnix's UI text lives in Eclipse `messages.properties` files inside
 `org.rssowl.core` and `org.rssowl.ui`. Translations are shipped as separate
-**NLS fragment** bundles under `translations/<lang>/`, so you never need to
+**NLS fragment** bundles under `translations/`, so you never need to
 touch the main source code — you're only ever adding or editing
 `.properties` files.
 
@@ -18,16 +18,21 @@ You need:
 
 You do **not** need to build the project, install Eclipse, or know Java.
 
-## 1. Find your language folder
+## 1. Find your language's fragment folders
 
-Check `translations/` in this repo for a folder matching your language code
-(e.g. `de` for German, `zh_CN` for Simplified Chinese). If it doesn't exist
-yet, see [Starting a new language](#starting-a-new-language-not-listed-here) below.
+Check `translations/` in this repo for folders ending in your language
+code (e.g. `org.rssowl.core.nls.de` and `org.rssowl.ui.nls.de` for
+German; `org.rssowl.core.nls.zhcn` and `org.rssowl.ui.nls.zhcn` for
+Simplified Chinese — the two Chinese variants use `zhcn`/`zhtw` in
+folder names, but the actual `.properties` files inside still use the
+real locale suffix `zh_CN`/`zh_TW`). If your language doesn't have
+folders yet, see
+[Starting a new language](#starting-a-new-language-not-listed-here) below.
 
-Each language folder mirrors the package structure of the main source, e.g.:
+Each fragment mirrors the package structure of the main source, e.g.:
 
 ```
-translations/de/org.rssowl.ui.nls.de/org/rssowl/ui/internal/dialogs/welcome/messages_de.properties
+translations/org.rssowl.ui.nls.de/org/rssowl/ui/internal/dialogs/welcome/messages_de.properties
 ```
 
 corresponds to:
@@ -36,7 +41,7 @@ corresponds to:
 org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/welcome/messages.properties
 ```
 
-Same folder path, same filename, just `messages_de.properties` instead of
+Same package path, same filename, just `messages_de.properties` instead of
 `messages.properties`, and only the translated key/value pairs (no need to
 copy keys you haven't translated yet).
 
@@ -95,21 +100,30 @@ submit as many small PRs as you like.
 
 ## Starting a new language not listed here
 
-1. Copy an existing language folder under `translations/` (e.g.
-   `translations/de/`) to `translations/<your-lang-code>/`, using an
+1. Copy the three existing German fragment/feature folders under
+   `translations/` (`org.rssowl.core.nls.de`, `org.rssowl.ui.nls.de`,
+   `org.rssowl.feature.nls.de`) to new folders using your language's
    [ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes)
-   code (or `xx_YY` for regional variants, e.g. `zh_CN`, `zh_TW`, `pt_BR`).
-2. Rename the fragment folders and their `messages_XX.properties` files to
-   your language code, and delete the translated values inside (leave the
-   English fallback out — untranslated keys should simply not appear in the
-   file).
+   code, e.g. `org.rssowl.core.nls.sv` for Swedish (or a short lowercase
+   form without the underscore for regional variants, matching the
+   existing `zhcn`/`zhtw` pattern, e.g. `ptbr` for `pt_BR` — the folder
+   name and the `messages_XX.properties` locale suffix don't have to
+   match exactly, but keep them close). These stay directly under
+   `translations/` — no per-language subfolder, matching how `bundles/`
+   and `features/` are laid out (tycho-pomless 1.1.0, as pinned in
+   `.mvn/extensions.xml`, only resolves a module's parent one directory
+   level up with no override available).
+2. Rename each fragment's `messages_de.properties` files to your
+   language's real locale suffix (e.g. `messages_sv.properties`), and
+   delete the translated values inside (leave the English fallback out —
+   untranslated keys should simply not appear in the file).
 3. Update `Bundle-SymbolicName` and `Fragment-Host` in each
-   `META-INF/MANIFEST.MF` and the `pom.xml` `<artifactId>` to match your
-   language code.
-4. Add your new module to `translations/pom.xml` and a `<feature>` entry to
-   `releng/update-nls/category.xml` (see the comment at the top of that
-   file for the exact format, or ask in your PR and a maintainer will help
-   wire it up).
+   `META-INF/MANIFEST.MF`, and `id`/`label` in `feature.xml`, to match
+   your language code.
+4. Add your three new modules to `translations/pom.xml` and a
+   `<feature>` entry to `releng/update-nls/category.xml` (see the
+   existing entries for the exact format, or ask in your PR and a
+   maintainer will help wire it up).
 5. Open a PR with just the scaffolding — you don't need to translate
    everything before your first PR.
 
