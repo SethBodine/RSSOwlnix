@@ -396,6 +396,38 @@
   `org.rssowl.ui/plugin.eclipse.xml`
   `org.rssowl.ui/plugin.properties`
 
+### Fixed
+
+- **Fixed Tycho build failure caused by hardcoded version constraints in the
+  bundled language packs**
+  Moving the translations into the repo introduced a P2 dependency
+  resolution failure: `org.rssowl.core.nls.da` (and the 19 other language
+  fragments/features) required `org.rssowl.core`/`org.rssowl.ui` in the
+  exact range `[2.10.4,2.10.5)`, hardcoded into `Fragment-Host` and the
+  feature `<import>` elements. Since the actual code version tracked by
+  `set-version.sh` was `2.10.3`, every CI build failed at
+  `org.rssowl.core.nls.da` with "Missing requirement... could not be
+  found", skipping the remaining 37 reactor modules.
+
+  Two changes fix this:
+  - Removed the exact-range host-version constraint from all 20
+    `Fragment-Host` entries and the corresponding 10 feature `<import>`
+    elements, so language packs attach to whatever host version is
+    actually built instead of requiring an exact match. Translation packs
+    don't need to track the app's micro version - Eclipse NLS fallback
+    means missing keys just show English regardless of host version.
+  - Realigned the language packs' own `Bundle-Version`/feature version
+    from the stray `2.10.4.qualifier` back to `2.10.3.qualifier`, matching
+    the actual in-progress version, and added the `translations/*` globs
+    to `set-version.sh`'s MANIFEST.MF and feature.xml/category.xml loops
+    so this stays in sync automatically on every future version bump
+    instead of drifting again next release.
+
+  `translations/*/META-INF/MANIFEST.MF` (20 files)
+  `translations/org.rssowl.feature.nls.*/feature.xml` (10 files)
+  `releng/update-nls/category.xml`
+  `set-version.sh`
+
 ## [2.10.3-beta] - 2026-07-28
 
 ### New Features

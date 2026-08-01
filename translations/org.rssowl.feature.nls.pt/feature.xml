@@ -2,7 +2,7 @@
 <feature
       id="org.rssowl.feature.nls.pt"
       label="Portuguese Language Pack"
-      version="2.10.4.qualifier"
+      version="2.10.3.qualifier"
       provider-name="RSSOwlnix">
 
    <description>
@@ -20,8 +20,8 @@
    </license>
 
    <requires>
-      <import plugin="org.rssowl.core" version="2.10.4" match="greaterOrEqual"/>
-      <import plugin="org.rssowl.ui" version="2.10.4" match="greaterOrEqual"/>
+      <import plugin="org.rssowl.core"/>
+      <import plugin="org.rssowl.ui"/>
    </requires>
 
    <plugin

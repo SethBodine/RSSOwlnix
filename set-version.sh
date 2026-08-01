@@ -45,7 +45,8 @@ for f in \
   "$ROOT/org.rssowl.core/META-INF/MANIFEST.MF" \
   "$ROOT/org.rssowl.ui/META-INF/MANIFEST.MF" \
   "$ROOT/org.rssowl.core.tests/META-INF/MANIFEST.MF" \
-  "$ROOT/org.rssowl.lib.httpclient/META-INF/MANIFEST.MF"
+  "$ROOT/org.rssowl.lib.httpclient/META-INF/MANIFEST.MF" \
+  "$ROOT"/translations/*/META-INF/MANIFEST.MF
 do
   sed -i "s/Bundle-Version: [0-9]*\.[0-9]*\.[0-9]*\.qualifier/Bundle-Version: ${VERSION}.qualifier/" "$f"
   echo "  Updated $f"
@@ -59,7 +60,9 @@ for f in \
   "$ROOT/org.rssowl.feature.dependencies/feature.xml" \
   "$ROOT/org.rssowl.feature.dependencies.updater/feature.xml" \
   "$ROOT/org.rssowl.feature.tests/feature.xml" \
-  "$ROOT/releng/update/category.xml"
+  "$ROOT/releng/update/category.xml" \
+  "$ROOT"/translations/org.rssowl.feature.nls.*/feature.xml \
+  "$ROOT/releng/update-nls/category.xml"
 do
   sed -i "s/[0-9]*\.[0-9]*\.[0-9]*\.qualifier/${VERSION}.qualifier/g" "$f"
   echo "  Updated $f"
