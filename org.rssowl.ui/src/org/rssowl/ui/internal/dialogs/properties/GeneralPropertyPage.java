@@ -29,6 +29,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -48,6 +49,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.rssowl.core.Owl;
 import org.rssowl.core.connection.ConnectionException;
+import org.rssowl.core.internal.persist.pref.CascadingScope;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.persist.IBookMark;
 import org.rssowl.core.persist.IEntity;
@@ -122,6 +124,17 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
   private Button fUpdateCheck;
   private Combo fReloadCombo;
 
+  /* Folder Overrides (Feature 1: forced Auto-Update Interval / Feature 2: Proxy bypass) */
+  private boolean fIsAllFolders;
+  private IFolder fUpdateIntervalEnforcingAncestor;
+  private IFolder fProxyEnforcingAncestor;
+  private Label fUpdateIntervalManagedNotice;
+  private boolean fPrefFolderProxyOverrideState;
+  private boolean fPrefFolderProxyBypass;
+  private Button fProxyOverrideCheck;
+  private Button fProxyBypassCheck;
+  private Label fProxyManagedNotice;
+
   /*
    * @see org.rssowl.ui.dialogs.properties.IEntityPropertyPage#init(org.rssowl.ui.dialogs.properties.IPropertyDialogSite,
    * java.util.List)
@@ -132,10 +145,32 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
     fSite = site;
     fEntities = entities;
 
+    /* Determine whether this is a Folder-only selection (Folder Overrides apply) */
+    fIsAllFolders = true;
+    for (IEntity entity : entities) {
+      if (!(entity instanceof IFolder)) {
+        fIsAllFolders = false;
+        break;
+      }
+    }
+
     /* Load Entity Preferences */
     fEntityPreferences = new ArrayList<IPreferenceScope>(fEntities.size());
     for (IEntity entity : entities)
       fEntityPreferences.add(Owl.getPreferenceService().getEntityScope(entity));
+
+    /* For a single Folder, determine if an ancestor Folder is enforcing an override (Managed-by UI) */
+    if (fIsAllFolders && fEntities.size() == 1) {
+      IFolder folder = (IFolder) fEntities.get(0);
+
+      IPreferenceScope intervalCascade = Owl.getPreferenceService().getCascadingScope(folder, DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE);
+      if (intervalCascade instanceof CascadingScope)
+        fUpdateIntervalEnforcingAncestor = ((CascadingScope) intervalCascade).getEnforcingSource();
+
+      IPreferenceScope proxyCascade = Owl.getPreferenceService().getCascadingScope(folder, DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE);
+      if (proxyCascade instanceof CascadingScope)
+        fProxyEnforcingAncestor = ((CascadingScope) proxyCascade).getEnforcingSource();
+    }
 
     /* Load initial Settings */
     loadInitialSettings();
@@ -145,31 +180,54 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
     }
   }
 
+  /* The Preference key indicating whether Auto-Update is forced/enabled - Folder-only key for a Folder selection, Bookmark-only key otherwise */
+  private String getUpdateIntervalStateKey() {
+    return fIsAllFolders ? DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE : DefaultPreferences.BM_UPDATE_INTERVAL_STATE;
+  }
+
+  /* The Preference key holding the Auto-Update Interval value - Folder-only key for a Folder selection, Bookmark-only key otherwise */
+  private String getUpdateIntervalValueKey() {
+    return fIsAllFolders ? DefaultPreferences.FOLDER_UPDATE_INTERVAL : DefaultPreferences.BM_UPDATE_INTERVAL;
+  }
+
   private void loadInitialSettings() {
 
     /* Take the first scope as initial values */
     IPreferenceScope firstScope = fEntityPreferences.get(0);
-    fPrefUpdateIntervalState = firstScope.getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE);
-    fPrefUpdateInterval = firstScope.getLong(DefaultPreferences.BM_UPDATE_INTERVAL);
+    fPrefUpdateIntervalState = firstScope.getBoolean(getUpdateIntervalStateKey());
+    fPrefUpdateInterval = firstScope.getLong(getUpdateIntervalValueKey());
     fPrefOpenOnStartup = firstScope.getBoolean(DefaultPreferences.BM_OPEN_ON_STARTUP);
     fPrefReloadOnStartup = firstScope.getBoolean(DefaultPreferences.BM_RELOAD_ON_STARTUP);
+
+    if (fIsAllFolders) {
+      fPrefFolderProxyOverrideState = firstScope.getBoolean(DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE);
+      fPrefFolderProxyBypass = firstScope.getBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS);
+    }
 
     /* For any other scope not sharing the initial values, use the default */
     IPreferenceScope defaultScope = Owl.getPreferenceService().getDefaultScope();
     for (int i = 1; i < fEntityPreferences.size(); i++) {
       IPreferenceScope otherScope = fEntityPreferences.get(i);
 
-      if (otherScope.getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE) != fPrefUpdateIntervalState)
-        fPrefUpdateIntervalState = defaultScope.getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE);
+      if (otherScope.getBoolean(getUpdateIntervalStateKey()) != fPrefUpdateIntervalState)
+        fPrefUpdateIntervalState = defaultScope.getBoolean(getUpdateIntervalStateKey());
 
-      if (otherScope.getLong(DefaultPreferences.BM_UPDATE_INTERVAL) != fPrefUpdateInterval)
-        fPrefUpdateInterval = defaultScope.getLong(DefaultPreferences.BM_UPDATE_INTERVAL);
+      if (otherScope.getLong(getUpdateIntervalValueKey()) != fPrefUpdateInterval)
+        fPrefUpdateInterval = defaultScope.getLong(getUpdateIntervalValueKey());
 
       if (otherScope.getBoolean(DefaultPreferences.BM_OPEN_ON_STARTUP) != fPrefOpenOnStartup)
         fPrefOpenOnStartup = defaultScope.getBoolean(DefaultPreferences.BM_OPEN_ON_STARTUP);
 
       if (otherScope.getBoolean(DefaultPreferences.BM_RELOAD_ON_STARTUP) != fPrefReloadOnStartup)
         fPrefReloadOnStartup = defaultScope.getBoolean(DefaultPreferences.BM_RELOAD_ON_STARTUP);
+
+      if (fIsAllFolders) {
+        if (otherScope.getBoolean(DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE) != fPrefFolderProxyOverrideState)
+          fPrefFolderProxyOverrideState = defaultScope.getBoolean(DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE);
+
+        if (otherScope.getBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS) != fPrefFolderProxyBypass)
+          fPrefFolderProxyBypass = defaultScope.getBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS);
+      }
     }
 
     fUpdateIntervalScope = getUpdateIntervalScope();
@@ -287,7 +345,9 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
       autoReloadContainer.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, true));
 
       fUpdateCheck = new Button(autoReloadContainer, SWT.CHECK);
-      if (fIsSingleBookMark)
+      if (fIsAllFolders)
+        fUpdateCheck.setText(Messages.GeneralPropertyPage_FORCE_UPDATE_FOLDER);
+      else if (fIsSingleBookMark)
         fUpdateCheck.setText(Messages.GeneralPropertyPage_UPDATE_FEED);
       else
         fUpdateCheck.setText(Messages.GeneralPropertyPage_UPDATE_FEEDS);
@@ -322,6 +382,17 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
       fReloadCombo.select(fUpdateIntervalScope);
       fReloadCombo.setEnabled(fPrefUpdateIntervalState);
 
+      /* Folder Override: grey out and show who is managing it if an ancestor Folder is enforcing */
+      if (fUpdateIntervalEnforcingAncestor != null) {
+        fUpdateCheck.setEnabled(false);
+        fReloadSpinner.setEnabled(false);
+        fReloadCombo.setEnabled(false);
+
+        fUpdateIntervalManagedNotice = new Label(autoReloadContainer, SWT.WRAP);
+        fUpdateIntervalManagedNotice.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false, 3, 1));
+        fUpdateIntervalManagedNotice.setText(NLS.bind(Messages.GeneralPropertyPage_MANAGED_BY_ANCESTOR, fUpdateIntervalEnforcingAncestor.getName()));
+      }
+
       /* Reload on Startup */
       fReloadOnStartupCheck = new Button(otherSettingsContainer, SWT.CHECK);
       fReloadOnStartupCheck.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
@@ -334,6 +405,41 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
     fOpenOnStartupCheck.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
     fOpenOnStartupCheck.setText(getOpenOnStartupSettingName());
     fOpenOnStartupCheck.setSelection(fPrefOpenOnStartup);
+
+    /* Folder Override: Proxy Bypass (Feature 2 - only applies to Folders) */
+    if (fIsAllFolders) {
+      Composite proxyOverrideContainer = new Composite(otherSettingsContainer, SWT.NONE);
+      proxyOverrideContainer.setLayout(LayoutUtils.createGridLayout(1, 0, 0));
+      proxyOverrideContainer.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, true));
+      ((GridLayout) proxyOverrideContainer.getLayout()).marginTop = 10;
+
+      fProxyOverrideCheck = new Button(proxyOverrideContainer, SWT.CHECK);
+      fProxyOverrideCheck.setText(Messages.GeneralPropertyPage_OVERRIDE_PROXY_FOLDER);
+      fProxyOverrideCheck.setSelection(fPrefFolderProxyOverrideState);
+      fProxyOverrideCheck.addSelectionListener(new SelectionAdapter() {
+        @Override
+        public void widgetSelected(SelectionEvent e) {
+          fProxyBypassCheck.setEnabled(fProxyOverrideCheck.getSelection());
+        }
+      });
+
+      fProxyBypassCheck = new Button(proxyOverrideContainer, SWT.CHECK);
+      fProxyBypassCheck.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+      ((GridData) fProxyBypassCheck.getLayoutData()).horizontalIndent = 20;
+      fProxyBypassCheck.setText(Messages.GeneralPropertyPage_BYPASS_PROXY);
+      fProxyBypassCheck.setSelection(fPrefFolderProxyBypass);
+      fProxyBypassCheck.setEnabled(fPrefFolderProxyOverrideState);
+
+      /* Folder Override: grey out and show who is managing it if an ancestor Folder is enforcing */
+      if (fProxyEnforcingAncestor != null) {
+        fProxyOverrideCheck.setEnabled(false);
+        fProxyBypassCheck.setEnabled(false);
+
+        fProxyManagedNotice = new Label(proxyOverrideContainer, SWT.WRAP);
+        fProxyManagedNotice.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+        fProxyManagedNotice.setText(NLS.bind(Messages.GeneralPropertyPage_MANAGED_BY_ANCESTOR, fProxyEnforcingAncestor.getName()));
+      }
+    }
 
     return container;
   }
@@ -485,18 +591,20 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
 
     /* Now handle single/multi entity Preferences */
     for (IPreferenceScope scope : fEntityPreferences) {
-      if (updatePreferences(scope)) {
-        IEntity entityToSave = fEntities.get(fEntityPreferences.indexOf(scope));
-        entitiesToSave.add(entityToSave);
+      IEntity entity = fEntities.get(fEntityPreferences.indexOf(scope));
+      if (updatePreferences(scope, entity)) {
+        entitiesToSave.add(entity);
         fSettingsChanged = true;
       }
     }
 
-    /* Update changes to all Childs as well if Folder */
-    for (IEntity entity : fEntities) {
-      if (fSettingsChanged && entity instanceof IFolder)
-        updateChildPreferences((IFolder) entity);
-    }
+    /*
+     * Note: Folder-level settings are no longer copied down onto child
+     * Bookmarks/Folders at save-time. Resolution is live and cascading
+     * (see CascadingScope) - a Folder's forced Auto-Update Interval and
+     * Proxy bypass choice apply to everything nested inside it
+     * automatically, without needing to write anything onto the children.
+     */
 
     return true;
   }
@@ -653,20 +761,21 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
     return null;
   }
 
-  private boolean updatePreferences(IPreferenceScope scope) {
+  private boolean updatePreferences(IPreferenceScope scope, IEntity entity) {
     boolean changed = false;
+    boolean isFolder = entity instanceof IFolder;
 
-    /* Update Interval State */
-    if (fUpdateCheck != null) {
+    /* Update Interval State - Folder-only key for a Folder, Bookmark-only key otherwise */
+    if (fUpdateCheck != null && fUpdateCheck.isEnabled()) {
       boolean bVal = fUpdateCheck.getSelection();
       if (fPrefUpdateIntervalState != bVal) {
-        scope.putBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE, bVal);
+        scope.putBoolean(getUpdateIntervalStateKey(), bVal);
         changed = true;
       }
     }
 
     /* Update Interval */
-    if (fReloadCombo != null) {
+    if (fReloadCombo != null && fReloadCombo.isEnabled()) {
       long lVal;
       fUpdateIntervalScope = fReloadCombo.getSelectionIndex();
 
@@ -680,7 +789,7 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
         lVal = fReloadSpinner.getSelection() * DAY_IN_SECONDS;
 
       if (fPrefUpdateInterval != lVal) {
-        scope.putLong(DefaultPreferences.BM_UPDATE_INTERVAL, lVal);
+        scope.putLong(getUpdateIntervalValueKey(), lVal);
         changed = true;
       }
     }
@@ -703,28 +812,21 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
       }
     }
 
-    return changed;
-  }
+    /* Proxy Override (Folder-only) */
+    if (isFolder && fProxyOverrideCheck != null && fProxyOverrideCheck.isEnabled()) {
+      boolean bVal = fProxyOverrideCheck.getSelection();
+      if (fPrefFolderProxyOverrideState != bVal) {
+        scope.putBoolean(DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE, bVal);
+        changed = true;
+      }
 
-  private void updateChildPreferences(IFolder folder) {
-
-    /* Update changes to Child-BookMarks */
-    List<IMark> marks = folder.getMarks();
-    for (IMark mark : marks) {
-      if (mark instanceof IBookMark) {
-        IPreferenceScope scope = Owl.getPreferenceService().getEntityScope(mark);
-        updatePreferences(scope);
+      boolean bypassVal = fProxyBypassCheck.getSelection();
+      if (fPrefFolderProxyBypass != bypassVal) {
+        scope.putBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS, bypassVal);
+        changed = true;
       }
     }
 
-    /* Update changes to Child-Folders */
-    List<IFolder> folders = folder.getFolders();
-    for (IFolder childFolder : folders) {
-      IPreferenceScope scope = Owl.getPreferenceService().getEntityScope(childFolder);
-      updatePreferences(scope);
-
-      /* Recursively Proceed */
-      updateChildPreferences(childFolder);
-    }
+    return changed;
   }
 }

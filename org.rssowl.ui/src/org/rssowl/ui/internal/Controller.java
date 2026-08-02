@@ -59,6 +59,7 @@ import org.rssowl.core.connection.MonitorCanceledException;
 import org.rssowl.core.connection.NotModifiedException;
 import org.rssowl.core.connection.UnknownProtocolException;
 import org.rssowl.core.internal.InternalOwl;
+import org.rssowl.core.internal.persist.pref.CascadingScope;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.interpreter.ITypeExporter.Options;
 import org.rssowl.core.interpreter.InterpreterException;
@@ -757,6 +758,16 @@ public class Controller {
       if (properties == null)
         properties = new HashMap<>();
       properties.put(IConnectionPropertyConstants.CON_TIMEOUT, fConnectionTimeout);
+
+      /* Resolve Folder Proxy-Bypass override, if any Folder in the ancestry is enforcing one */
+      IPreferenceScope proxyCascadingScope = Owl.getPreferenceService().getCascadingScope(bookmark, DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE);
+      if (proxyCascadingScope instanceof CascadingScope) {
+        IFolder enforcingProxyFolder = ((CascadingScope) proxyCascadingScope).getEnforcingSource();
+        if (enforcingProxyFolder != null) {
+          boolean bypassProxy = Owl.getPreferenceService().getEntityScope(enforcingProxyFolder).getBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS);
+          properties.put(IConnectionPropertyConstants.USE_PROXY, !bypassProxy);
+        }
+      }
 
       /* Add Conditional GET Headers if present */
       if (conditionalGet != null) {

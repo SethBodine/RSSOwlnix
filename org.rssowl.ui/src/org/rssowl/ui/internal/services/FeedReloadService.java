@@ -33,13 +33,18 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.rssowl.core.Owl;
+import org.rssowl.core.internal.persist.pref.CascadingScope;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
 import org.rssowl.core.persist.IBookMark;
+import org.rssowl.core.persist.IFolder;
+import org.rssowl.core.persist.IMark;
 import org.rssowl.core.persist.INewsBin;
 import org.rssowl.core.persist.INewsMark;
 import org.rssowl.core.persist.dao.OwlDAO;
 import org.rssowl.core.persist.event.BookMarkAdapter;
 import org.rssowl.core.persist.event.BookMarkEvent;
+import org.rssowl.core.persist.event.FolderAdapter;
+import org.rssowl.core.persist.event.FolderEvent;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.ui.internal.Controller;
 import org.rssowl.ui.internal.OwlUI;
@@ -72,6 +77,9 @@ public class FeedReloadService {
 
   /* Listen to Bookmark Updates */
   private BookMarkAdapter fBookMarkListener;
+
+  /* Listen to Folder Updates (to re-sync when a Folder's forced Update Interval changes) */
+  private FolderAdapter fFolderListener;
 
   /* Map IBookMark to Update-Intervals */
   private final Map<IBookMark, Long> fMapBookMarkToInterval;
@@ -177,9 +185,9 @@ public class FeedReloadService {
     for (IBookMark bookMark : bookmarks) {
       IPreferenceScope entityPreferences = Owl.getPreferenceService().getEntityScope(bookMark);
 
-      /* BookMark is to reload in a certain Interval */
-      if (entityPreferences.getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE)) {
-        long updateInterval = entityPreferences.getLong(DefaultPreferences.BM_UPDATE_INTERVAL);
+      /* BookMark is to reload in a certain Interval (Folder override may apply, see resolveUpdateIntervalState/resolveUpdateInterval) */
+      if (resolveUpdateIntervalState(bookMark)) {
+        long updateInterval = resolveUpdateInterval(bookMark);
         fMapBookMarkToInterval.put(bookMark, updateInterval);
 
         /* BookMark is to reload on startup */
@@ -270,19 +278,113 @@ public class FeedReloadService {
     };
 
     OwlDAO.addEntityListener(IBookMark.class, fBookMarkListener);
+
+    fFolderListener = new FolderAdapter() {
+      @Override
+      public void entitiesUpdated(Set<FolderEvent> events) {
+        if (!Controller.getDefault().isShuttingDown())
+          onFoldersUpdated(events);
+      }
+    };
+
+    OwlDAO.addEntityListener(IFolder.class, fFolderListener);
   }
 
   private void unregisterListeners() {
     OwlDAO.removeEntityListener(IBookMark.class, fBookMarkListener);
+    OwlDAO.removeEntityListener(IFolder.class, fFolderListener);
+  }
+
+  /*
+   * A Folder's forced Auto-Update Interval (or its enabled-state) changed.
+   * Since resolution is cascading and root-first, this can affect every
+   * Bookmark nested anywhere below the Folder (including through other
+   * Folders that were previously - or are now - shadowed by this one), so
+   * walk the whole subtree and re-sync each Bookmark found.
+   */
+  private void onFoldersUpdated(Set<FolderEvent> events) {
+    for (FolderEvent event : events) {
+      IFolder updatedFolder = event.getEntity();
+      for (IBookMark bookMark : collectBookMarksRecursively(updatedFolder))
+        sync(bookMark);
+    }
+  }
+
+  /* Recursively collects all Bookmarks nested (at any depth) inside the given Folder */
+  private List<IBookMark> collectBookMarksRecursively(IFolder folder) {
+    List<IBookMark> result = new ArrayList<>();
+
+    for (IMark mark : folder.getMarks()) {
+      if (mark instanceof IBookMark)
+        result.add((IBookMark) mark);
+    }
+
+    for (IFolder childFolder : folder.getFolders())
+      result.addAll(collectBookMarksRecursively(childFolder));
+
+    return result;
+  }
+
+  /**
+   * Resolves whether the given Bookmark is to Auto-Update, taking any
+   * enforced ancestor Folder override into account (topmost-enforced-wins),
+   * falling back to the Bookmark's own setting, and ultimately the Global
+   * default.
+   * <p>
+   * Note: the Folder-only <code>FOLDER_UPDATE_INTERVAL_STATE</code> key is
+   * only used to detect <em>whether</em> a Folder is enforcing (via
+   * {@link CascadingScope#getEnforcingSource()}); the actual boolean value
+   * is always read from whichever scope (Folder or Bookmark) turns out to
+   * be in control, using that scope's own dedicated key - the two features
+   * intentionally use separate keys so an eager property copy-down (e.g.
+   * during reparenting) can never freeze a stale Folder value onto a
+   * Bookmark that reads nothing of its own.
+   * </p>
+   *
+   * @param bookMark the Bookmark to resolve the setting for.
+   * @return whether the Bookmark is to Auto-Update.
+   */
+  private boolean resolveUpdateIntervalState(IBookMark bookMark) {
+    IFolder enforcingFolder = getEnforcingUpdateIntervalFolder(bookMark);
+    if (enforcingFolder != null)
+      return Owl.getPreferenceService().getEntityScope(enforcingFolder).getBoolean(DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE);
+
+    return Owl.getPreferenceService().getEntityScope(bookMark).getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE);
+  }
+
+  /**
+   * Resolves the Auto-Update Interval (in seconds) to use for the given
+   * Bookmark, taking any enforced ancestor Folder override into account
+   * (topmost-enforced-wins), falling back to the Bookmark's own setting,
+   * and ultimately the Global default. See {@link #resolveUpdateIntervalState(IBookMark)}
+   * for why the Folder and Bookmark values are read from separate keys.
+   *
+   * @param bookMark the Bookmark to resolve the Interval for.
+   * @return the Auto-Update Interval, in seconds.
+   */
+  private long resolveUpdateInterval(IBookMark bookMark) {
+    IFolder enforcingFolder = getEnforcingUpdateIntervalFolder(bookMark);
+    if (enforcingFolder != null)
+      return Owl.getPreferenceService().getEntityScope(enforcingFolder).getLong(DefaultPreferences.FOLDER_UPDATE_INTERVAL);
+
+    return Owl.getPreferenceService().getEntityScope(bookMark).getLong(DefaultPreferences.BM_UPDATE_INTERVAL);
+  }
+
+  /* Returns the topmost ancestor Folder of the Bookmark that is currently forcing the Auto-Update Interval, or null if none is */
+  private IFolder getEnforcingUpdateIntervalFolder(IBookMark bookMark) {
+    IPreferenceScope cascadingScope = Owl.getPreferenceService().getCascadingScope(bookMark, DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE);
+    if (cascadingScope instanceof CascadingScope)
+      return ((CascadingScope) cascadingScope).getEnforcingSource();
+
+    return null;
   }
 
   private void onBookMarksAdded(Set<BookMarkEvent> events) {
     for (BookMarkEvent event : events) {
       IBookMark addedBookMark = event.getEntity();
-      IPreferenceScope entityPreferences = Owl.getPreferenceService().getEntityScope(addedBookMark);
 
-      Long interval = entityPreferences.getLong(DefaultPreferences.BM_UPDATE_INTERVAL);
-      boolean autoUpdateState = entityPreferences.getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE);
+      Long interval = resolveUpdateInterval(addedBookMark);
+      boolean autoUpdateState = resolveUpdateIntervalState(addedBookMark);
 
       /* BookMark wants to Auto-Update */
       if (autoUpdateState)
@@ -311,12 +413,10 @@ public class FeedReloadService {
    * @param updatedBookmark The Bookmark to synchronize with the reload-service.
    */
   public void sync(IBookMark updatedBookmark) {
-    IPreferenceScope entityPreferences = Owl.getPreferenceService().getEntityScope(updatedBookmark);
-
     Long oldInterval = fMapBookMarkToInterval.get(updatedBookmark);
-    Long newInterval = entityPreferences.getLong(DefaultPreferences.BM_UPDATE_INTERVAL);
+    Long newInterval = resolveUpdateInterval(updatedBookmark);
 
-    boolean autoUpdateState = entityPreferences.getBoolean(DefaultPreferences.BM_UPDATE_INTERVAL_STATE);
+    boolean autoUpdateState = resolveUpdateIntervalState(updatedBookmark);
 
     /* BookMark known to the Service */
     if (oldInterval != null) {

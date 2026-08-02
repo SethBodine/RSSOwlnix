@@ -127,6 +127,73 @@ public class ConnectionTests {
   }
 
   /**
+   * Regression test for the Folder-level Proxy bypass override: when
+   * <code>USE_PROXY</code> is absent (or <code>true</code>) from the
+   * properties passed to reload/openStream, the existing behavior applies
+   * and the (misconfigured, unreachable) Proxy is used, causing the
+   * connection to fail. This proves the Proxy is actually being consulted
+   * without needing a real, working Proxy server - an unreachable one
+   * (port 0 on localhost) is enough to detect whether it was used at all.
+   *
+   * @throws Exception
+   */
+  @Test
+  @SuppressWarnings("nls")
+  public void testUseProxyAbsentFallsThroughToProxyResolution() throws Exception {
+    try {
+      MyCredentialsProvider.isEnabled = true;
+
+      IConnectionService conManager = Owl.getConnectionService();
+      URI feedUrl = new URI(TestWebServer.rootHttp + "/feed/some_feed.xml");
+
+      boolean connectedThroughBogusProxy;
+      try {
+        conManager.reload(feedUrl, new NullProgressMonitor(), null);
+        connectedThroughBogusProxy = false;
+      } catch (Exception e) {
+        connectedThroughBogusProxy = true;
+      }
+
+      assertTrue("Expected the connection to fail because the (bogus) Proxy from the CredentialsProvider was consulted", connectedThroughBogusProxy);
+    } finally {
+      MyCredentialsProvider.isEnabled = false;
+    }
+  }
+
+  /**
+   * Regression test for the Folder-level Proxy bypass override: when
+   * <code>USE_PROXY</code> is explicitly <code>false</code> in the
+   * properties passed to reload/openStream (as
+   * {@link org.rssowl.ui.internal.Controller} does when a Folder ancestor
+   * is enforcing "bypass Proxy"), Proxy resolution must be skipped
+   * entirely and a direct connection made - even though the
+   * CredentialsProvider would otherwise hand back a Proxy that cannot be
+   * connected to.
+   *
+   * @throws Exception
+   */
+  @Test
+  @SuppressWarnings("nls")
+  public void testUseProxyFalseBypassesProxyResolution() throws Exception {
+    try {
+      MyCredentialsProvider.isEnabled = true;
+
+      IConnectionService conManager = Owl.getConnectionService();
+      URI feedUrl = new URI(TestWebServer.rootHttp + "/feed/some_feed.xml");
+
+      Map<Object, Object> properties = new HashMap<>();
+      properties.put(IConnectionPropertyConstants.USE_PROXY, Boolean.FALSE);
+
+      Triple<IFeed, IConditionalGet, URI> result = conManager.reload(feedUrl, new NullProgressMonitor(), properties);
+
+      assertNotNull("Expected a direct connection to succeed, bypassing the bogus Proxy", result);
+      assertNotNull(result.getFirst());
+    } finally {
+      MyCredentialsProvider.isEnabled = false;
+    }
+  }
+
+  /**
    * @throws Exception
    */
   @Test

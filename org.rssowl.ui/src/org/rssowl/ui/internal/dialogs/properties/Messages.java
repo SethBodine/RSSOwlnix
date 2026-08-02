@@ -63,6 +63,10 @@ public class Messages extends NLS {
   public static String GeneralPropertyPage_SECONDS;
   public static String GeneralPropertyPage_UPDATE_FEED;
   public static String GeneralPropertyPage_UPDATE_FEEDS;
+  public static String GeneralPropertyPage_FORCE_UPDATE_FOLDER;
+  public static String GeneralPropertyPage_MANAGED_BY_ANCESTOR;
+  public static String GeneralPropertyPage_OVERRIDE_PROXY_FOLDER;
+  public static String GeneralPropertyPage_BYPASS_PROXY;
   public static String GeneralPropertyPage_WARNING;
   public static String InformationPropertyPage_BOOKMARKS;
   public static String InformationPropertyPage_CREATED;

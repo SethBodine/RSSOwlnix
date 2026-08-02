@@ -139,6 +139,18 @@ public enum Preference {
   /** BookMarks: Reload on Startup */
   BM_RELOAD_ON_STARTUP("org.rssowl.pref.BMReloadOnStartup", IPreferenceType.BOOLEAN), //$NON-NLS-1$
 
+  /** Folder: Forced Auto-Update Interval for all Feeds nested in the Folder (long, seconds) */
+  FOLDER_UPDATE_INTERVAL("org.rssowl.pref.FolderUpdateInterval", IPreferenceType.LONG), //$NON-NLS-1$
+
+  /** Folder: Whether the Folder is forcing an Auto-Update Interval on nested Feeds (boolean) */
+  FOLDER_UPDATE_INTERVAL_STATE("org.rssowl.pref.FolderUpdateIntervalState", IPreferenceType.BOOLEAN), //$NON-NLS-1$
+
+  /** Folder: Whether the Folder is overriding the Proxy setting for nested Feeds (boolean) */
+  FOLDER_PROXY_OVERRIDE_STATE("org.rssowl.pref.FolderProxyOverrideState", IPreferenceType.BOOLEAN), //$NON-NLS-1$
+
+  /** Folder: Whether nested Feeds should bypass the Proxy and connect directly (boolean) */
+  FOLDER_PROXY_BYPASS("org.rssowl.pref.FolderProxyBypass", IPreferenceType.BOOLEAN), //$NON-NLS-1$
+
   /** Feed View: Search Target */
   FV_SEARCH_TARGET("org.rssowl.ui.internal.editors.feed.SearchTarget", IPreferenceType.INTEGER), //$NON-NLS-1$
 

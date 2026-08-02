@@ -142,6 +142,18 @@ public class DefaultPreferences {
   /** BookMarks: Reload on Startup */
   public static final String BM_RELOAD_ON_STARTUP = Preference.BM_RELOAD_ON_STARTUP.id();
 
+  /** Folder: Forced Auto-Update Interval for all Feeds nested in the Folder (long, seconds) */
+  public static final String FOLDER_UPDATE_INTERVAL = Preference.FOLDER_UPDATE_INTERVAL.id();
+
+  /** Folder: Whether the Folder is forcing an Auto-Update Interval on nested Feeds (boolean) */
+  public static final String FOLDER_UPDATE_INTERVAL_STATE = Preference.FOLDER_UPDATE_INTERVAL_STATE.id();
+
+  /** Folder: Whether the Folder is overriding the Proxy setting for nested Feeds (boolean) */
+  public static final String FOLDER_PROXY_OVERRIDE_STATE = Preference.FOLDER_PROXY_OVERRIDE_STATE.id();
+
+  /** Folder: Whether nested Feeds should bypass the Proxy and connect directly (boolean) */
+  public static final String FOLDER_PROXY_BYPASS = Preference.FOLDER_PROXY_BYPASS.id();
+
   /** Feed View: Search Target */
   public static final String FV_SEARCH_TARGET = Preference.FV_SEARCH_TARGET.id();
 

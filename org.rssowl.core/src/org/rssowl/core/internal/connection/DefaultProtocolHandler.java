@@ -524,7 +524,14 @@ public class DefaultProtocolHandler implements IProtocolHandler {
     Collection<String> proxyPreferredAuthSchemes = Arrays.asList(URIUtils.HTTP_SCHEME, URIUtils.HTTPS_SCHEME);
 
     HttpHost proxyHost = null;
-    IProxyCredentials proxyCredentials = Owl.getConnectionService().getProxyCredentials(link);
+
+    /* Determine whether Proxy usage is explicitly overridden via properties (e.g. a Folder proxy-bypass override) */
+    Boolean useProxyOverride = null;
+    if (properties != null && properties.get(IConnectionPropertyConstants.USE_PROXY) instanceof Boolean)
+      useProxyOverride = (Boolean) properties.get(IConnectionPropertyConstants.USE_PROXY);
+
+    /* Explicitly bypassing the Proxy: connect directly, skip proxy resolution entirely */
+    IProxyCredentials proxyCredentials = (useProxyOverride != null && !useProxyOverride) ? null : Owl.getConnectionService().getProxyCredentials(link);
     if (proxyCredentials != null) {
 //old:    /* --- Apply Proxy Config to HTTPClient */
 //old://  client.getParams().setAuthenticationPreemptive(true);

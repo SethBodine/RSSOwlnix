@@ -880,6 +880,49 @@ public class CoreUtilsTest {
   }
 
   /**
+   * Regression test for the Folder-level "forced Auto-Update Interval" and
+   * "Proxy bypass" override features: {@link CoreUtils#reparentWithProperties}
+   * eagerly copies any unset property from the new parent Folder onto the
+   * reparented child. Since a Bookmark never reads the Folder-only
+   * <code>FOLDER_UPDATE_INTERVAL(_STATE)</code>/<code>FOLDER_PROXY_*</code>
+   * keys (it only ever reads its own <code>BM_UPDATE_INTERVAL(_STATE)</code>
+   * keys), that eager copy is harmless: it may write the Folder key onto the
+   * Bookmark, but nothing downstream ever looks at it there, so no stale
+   * value gets "frozen" onto the Bookmark at move-time.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testReparentIntoOverridingFolderDoesNotFreezeStaleValueOnBookMark() throws Exception {
+    IFolder root = fFactory.createFolder(null, null, "Root");
+    IFolder plainFolder = fFactory.createFolder(null, root, "Plain");
+    IFolder enforcingFolder = fFactory.createFolder(null, root, "Enforcing");
+
+    /* Enforcing Folder forces a 5 Minute Update Interval on everything nested inside it */
+    enforcingFolder.setProperty(DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE, Boolean.TRUE);
+    enforcingFolder.setProperty(DefaultPreferences.FOLDER_UPDATE_INTERVAL, Long.valueOf(5 * 60));
+
+    IFeed feed = fFactory.createFeed(null, new URI("http://www.rssowl.org/reparent_test_feed"));
+    feed = OwlDAO.save(feed);
+    IBookMark bookMark = fFactory.createBookMark(null, plainFolder, new FeedLinkReference(feed.getLink()), "BookMark");
+
+    root = OwlDAO.save(root);
+
+    ReparentInfo<IFolderChild, IFolder> info = ReparentInfo.create((IFolderChild) bookMark, enforcingFolder, null, null);
+    CoreUtils.reparentWithProperties(Collections.singletonList(info));
+
+    /*
+     * The eager copy-down may (harmlessly) have written the Folder-only key
+     * onto the Bookmark. What matters is that the Bookmark's own dedicated
+     * key - the one actually consulted by FeedReloadService when no Folder
+     * is enforcing - was never touched, so there is no frozen, stale copy of
+     * the interval sitting on the Bookmark itself.
+     */
+    assertNull(bookMark.getProperty(DefaultPreferences.BM_UPDATE_INTERVAL_STATE));
+    assertNull(bookMark.getProperty(DefaultPreferences.BM_UPDATE_INTERVAL));
+  }
+
+  /**
    * @throws Exception
    */
   @Test

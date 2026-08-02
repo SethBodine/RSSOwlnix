@@ -188,6 +188,12 @@ public class PreferencesInitializer implements IPreferencesInitializer {
     defaultScope.putLong(Preference.BM_UPDATE_INTERVAL.id(), 60 * 30); // 30 Minutes
     defaultScope.putBoolean(Preference.BM_OPEN_ON_STARTUP.id(), false);
     defaultScope.putBoolean(Preference.BM_RELOAD_ON_STARTUP.id(), false);
+
+    /* Folder Overrides: disabled by default so no Folder enforces anything unless configured */
+    defaultScope.putBoolean(Preference.FOLDER_UPDATE_INTERVAL_STATE.id(), false);
+    defaultScope.putLong(Preference.FOLDER_UPDATE_INTERVAL.id(), 60 * 30); // 30 Minutes
+    defaultScope.putBoolean(Preference.FOLDER_PROXY_OVERRIDE_STATE.id(), false);
+    defaultScope.putBoolean(Preference.FOLDER_PROXY_BYPASS.id(), false);
   }
 
   /**

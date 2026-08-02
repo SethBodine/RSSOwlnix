@@ -29,14 +29,21 @@ import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.Platform;
 import org.rssowl.core.internal.Activator;
+import org.rssowl.core.internal.persist.pref.CascadingScope;
 import org.rssowl.core.internal.persist.pref.DefaultScope;
 import org.rssowl.core.internal.persist.pref.EclipseScope;
 import org.rssowl.core.internal.persist.pref.EntityScope;
 import org.rssowl.core.internal.persist.pref.GlobalScope;
 import org.rssowl.core.persist.IEntity;
+import org.rssowl.core.persist.IFolder;
+import org.rssowl.core.persist.IFolderChild;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.persist.pref.IPreferencesInitializer;
 import org.rssowl.core.persist.service.IPreferenceService;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Provides access to all preference related classes.
@@ -95,6 +102,33 @@ public class PreferenceServiceImpl implements IPreferenceService {
   @Override
   public IPreferenceScope getEntityScope(IEntity entity) {
     return new EntityScope(entity, fGlobalScope);
+  }
+
+  /*
+   * @see org.rssowl.core.persist.service.IPreferenceService#getCascadingScope(org.rssowl.core.persist.IFolderChild, java.lang.String)
+   */
+  @Override
+  public IPreferenceScope getCascadingScope(IFolderChild leaf, String stateKey) {
+
+    /* Collect Ancestor Folders, nearest-first */
+    List<IFolder> ancestorsNearestFirst = new ArrayList<>();
+    IFolder parent = leaf.getParent();
+    while (parent != null) {
+      ancestorsNearestFirst.add(parent);
+      parent = parent.getParent();
+    }
+
+    /* Root-first is required for topmost-enforced-wins precedence */
+    Collections.reverse(ancestorsNearestFirst);
+    List<IFolder> ancestorsRootFirst = ancestorsNearestFirst;
+
+    List<EntityScope> folderScopesRootFirst = new ArrayList<>(ancestorsRootFirst.size());
+    for (IFolder folder : ancestorsRootFirst)
+      folderScopesRootFirst.add(new EntityScope(folder, fGlobalScope));
+
+    IPreferenceScope leafScope = getEntityScope((IEntity) leaf);
+
+    return new CascadingScope(folderScopesRootFirst, ancestorsRootFirst, leafScope, stateKey);
   }
 
   /* Init scoped preferences */

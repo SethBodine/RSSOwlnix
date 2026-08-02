@@ -4,6 +4,57 @@
 
 ### Added
 
+- **Per-folder overrides: forced Auto-Update Interval + Proxy bypass**
+  Two folder-level override features, built on one shared, generic
+  inheritance mechanism (`CascadingScope`) instead of duplicating cascade
+  logic per feature. Precedence is **topmost-enforced-wins, root-first**:
+  walking from the root folder down to a bookmark, the first folder in
+  that path with its override enabled wins the whole subtree below it -
+  not the nearest one. A folder's own configured value is never deleted
+  or overwritten when it's outranked by an ancestor; it stays dormant and
+  reactivates automatically once the ancestor's override is disabled.
+
+  - **Forced Auto-Update Interval**: a folder can force a specific
+    refresh interval (e.g. every 5 minutes for a "Breaking News" folder,
+    once a day for "Archives") for every feed nested inside it,
+    overriding the global interval and any per-feed setting.
+    `FeedReloadService` now resolves each bookmark's interval through the
+    cascade and reacts to folder changes by recursively re-syncing every
+    bookmark nested underneath. The old `updateChildPreferences()`
+    one-shot copy-down in `GeneralPropertyPage` (which wrote a folder's
+    setting onto every *current* child's own keys at save time, and
+    silently missed children added later) has been removed - resolution
+    is now live.
+  - **Proxy bypass (v1, boolean only)**: a folder can force "use proxy" /
+    "connect directly" for every feed nested inside it, overriding the
+    global proxy configuration. Per-protocol (HTTP/HTTPS/SOCKS) config,
+    host/port fields, and credential storage are intentionally out of
+    scope for this pass and left for a v2 follow-up.
+    `Controller#reload()` resolves the cascade and injects the
+    (previously defined but unused) `USE_PROXY` connection property;
+    `DefaultProtocolHandler` now honors it, skipping proxy resolution
+    entirely when a folder ancestor has bypass enabled.
+
+  New preference keys (`FOLDER_UPDATE_INTERVAL[_STATE]`,
+  `FOLDER_PROXY_OVERRIDE_STATE`, `FOLDER_PROXY_BYPASS`) are deliberately
+  separate from the existing per-bookmark keys, so the property copy that
+  happens during reparenting can never freeze a stale folder value onto a
+  bookmark that never reads it - covered by a dedicated regression test.
+  `GeneralPropertyPage` gets new folder-only controls for both features,
+  greying out and showing "Managed by ancestor folder '…'" when a single
+  selected folder is shadowed by an enforcing ancestor.
+
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/pref/CascadingScope.java`
+  `org.rssowl.core/src/org/rssowl/core/persist/pref/Preference.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/pref/DefaultPreferences.java`
+  `org.rssowl.core/src/org/rssowl/core/persist/service/IPreferenceService.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/persist/service/PreferenceServiceImpl.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/DefaultProtocolHandler.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/services/FeedReloadService.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/PreferencesInitializer.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/GeneralPropertyPage.java`
+
 - **Added modern replacements for the dead `KeywordFeed` sources in `org.rssowl.ui/plugin.xml` and `plugin.eclipse.xml`**
   The previous pass dropped Google News, Delicious, Digg, Twitter, Google
   Blog Search, and YouTube (GData) because their RSS output was gone. This

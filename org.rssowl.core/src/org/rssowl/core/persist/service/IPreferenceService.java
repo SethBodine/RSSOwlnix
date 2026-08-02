@@ -27,6 +27,7 @@ package org.rssowl.core.persist.service;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.rssowl.core.persist.IEntity;
+import org.rssowl.core.persist.IFolderChild;
 import org.rssowl.core.persist.pref.IPreferenceScope;
 import org.rssowl.core.persist.pref.IPreferencesInitializer;
 
@@ -84,4 +85,28 @@ public interface IPreferenceService {
    * @return The Entity Scope for Preferences as defined by the given Entity.
    */
   IPreferenceScope getEntityScope(IEntity entity);
+
+  /**
+   * Returns a cascading Scope that resolves a per-Folder override for the
+   * given <code>leaf</code> (typically a Bookmark). Precedence is
+   * topmost-enforced-wins: walking from the root Folder down to the leaf's
+   * immediate parent, the first ancestor Folder whose <code>stateKey</code>
+   * is <code>true</code> wins the resolution for the entire subtree below
+   * it. If no ancestor is enforcing, resolution falls through to the
+   * leaf's own Entity Scope, and ultimately to the Global Scope.
+   * <p>
+   * This is used to implement Folder-level overrides (such as a forced
+   * Auto-Update Interval or a Proxy bypass choice) that apply to
+   * everything nested inside the Folder, without needing separate
+   * resolution logic per feature.
+   * </p>
+   *
+   * @param leaf the {@link IFolderChild} (typically a Bookmark) whose
+   * Folder ancestry is to be considered for the cascade.
+   * @param stateKey the boolean preference key that indicates whether a
+   * given Folder is enforcing an override.
+   * @return a cascading {@link IPreferenceScope} for the given leaf and
+   * state key.
+   */
+  IPreferenceScope getCascadingScope(IFolderChild leaf, String stateKey);
 }

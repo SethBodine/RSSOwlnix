@@ -60,6 +60,15 @@ public class EntityScope implements IPreferenceScope {
     return fParent;
   }
 
+  /**
+   * @return the {@link IEntity} this Scope is backed by. Package-visible,
+   * used by {@link CascadingScope} to identify which Entity is the source of
+   * an enforced override.
+   */
+  IEntity getEntity() {
+    return fEntity;
+  }
+
   /*
    * @see org.rssowl.ui.internal.preferences.IPreferencesScope#flush()
    */
