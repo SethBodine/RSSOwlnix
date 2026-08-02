@@ -44,8 +44,10 @@ import org.apache.hc.client5.http.impl.auth.BasicScheme;
 import org.apache.hc.client5.http.impl.auth.NTLMScheme;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.routing.DefaultRoutePlanner;
 import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
 import org.apache.hc.client5.http.socket.PlainConnectionSocketFactory;
@@ -616,11 +618,28 @@ public class DefaultProtocolHandler implements IProtocolHandler {
 
       Registry<ConnectionSocketFactory> socketFactoryRegistry = registryBuilder.build();
       BasicHttpClientConnectionManager basicHttpClientConnectionManager = new BasicHttpClientConnectionManager(socketFactoryRegistry);
-      CloseableHttpClient client = HttpClients.custom() //
+      HttpClientBuilder clientBuilder = HttpClients.custom() //
           //.disableRedirectHandling() // does redirects by default, do not disable
           .setConnectionManager(basicHttpClientConnectionManager) //
-          .setDefaultCredentialsProvider(credentialsProvider) //
-          .build();
+          .setDefaultCredentialsProvider(credentialsProvider);
+
+      /*
+       * Explicit Proxy bypass (e.g. a Folder override): force a direct
+       * connection via a fixed Route Planner that always resolves to "no
+       * Proxy", overriding even a JVM-wide system ProxySelector/System
+       * Properties that a default Route Planner might otherwise consult.
+       * Relying on RequestConfig#setProxy(null) alone is not sufficient
+       * here, since a null RequestConfig Proxy only means "not explicitly
+       * set" to some Route Planners, which then still fall back to
+       * whatever system-wide Proxy is configured - exactly what bypass is
+       * meant to prevent. DefaultRoutePlanner (not DefaultProxyRoutePlanner,
+       * which requires and always uses a fixed non-null Proxy) is the one
+       * whose determineProxy() unconditionally returns null.
+       */
+      if (useProxyOverride != null && !useProxyOverride)
+        clientBuilder.setRoutePlanner(new DefaultRoutePlanner(null));
+
+      CloseableHttpClient client = clientBuilder.build();
 
       /* --- Authentication if required */
 

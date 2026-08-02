@@ -101,6 +101,10 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
   private static final int HOURS_SCOPE = 2;
   private static final int DAYS_SCOPE = 3;
 
+  /* Proxy-Mode-Indeces in Combo */
+  private static final int PROXY_MODE_USE_PROXY = 0;
+  private static final int PROXY_MODE_BYPASS = 1;
+
   private Composite fParent;
   private IPropertyDialogSite fSite;
   private List<IEntity> fEntities;
@@ -132,7 +136,7 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
   private boolean fPrefFolderProxyOverrideState;
   private boolean fPrefFolderProxyBypass;
   private Button fProxyOverrideCheck;
-  private Button fProxyBypassCheck;
+  private Combo fProxyModeCombo;
   private Label fProxyManagedNotice;
 
   /*
@@ -159,17 +163,26 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
     for (IEntity entity : entities)
       fEntityPreferences.add(Owl.getPreferenceService().getEntityScope(entity));
 
-    /* For a single Folder, determine if an ancestor Folder is enforcing an override (Managed-by UI) */
-    if (fIsAllFolders && fEntities.size() == 1) {
-      IFolder folder = (IFolder) fEntities.get(0);
+    /*
+     * For a single Folder or Bookmark, determine if an ancestor Folder is
+     * enforcing an override (drives the greyed-out "Managed by ancestor
+     * folder" UI). This applies to Bookmarks too - a Bookmark nested under
+     * an enforcing Folder must not be able to set its own Auto-Update
+     * independently, since it would have no effect.
+     */
+    if (fEntities.size() == 1 && fEntities.get(0) instanceof IFolderChild) {
+      IFolderChild leaf = (IFolderChild) fEntities.get(0);
 
-      IPreferenceScope intervalCascade = Owl.getPreferenceService().getCascadingScope(folder, DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE);
+      IPreferenceScope intervalCascade = Owl.getPreferenceService().getCascadingScope(leaf, DefaultPreferences.FOLDER_UPDATE_INTERVAL_STATE);
       if (intervalCascade instanceof CascadingScope)
         fUpdateIntervalEnforcingAncestor = ((CascadingScope) intervalCascade).getEnforcingSource();
 
-      IPreferenceScope proxyCascade = Owl.getPreferenceService().getCascadingScope(folder, DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE);
-      if (proxyCascade instanceof CascadingScope)
-        fProxyEnforcingAncestor = ((CascadingScope) proxyCascade).getEnforcingSource();
+      /* Proxy override controls only exist for Folders, so only compute this for a Folder selection */
+      if (leaf instanceof IFolder) {
+        IPreferenceScope proxyCascade = Owl.getPreferenceService().getCascadingScope(leaf, DefaultPreferences.FOLDER_PROXY_OVERRIDE_STATE);
+        if (proxyCascade instanceof CascadingScope)
+          fProxyEnforcingAncestor = ((CascadingScope) proxyCascade).getEnforcingSource();
+      }
     }
 
     /* Load initial Settings */
@@ -419,21 +432,30 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
       fProxyOverrideCheck.addSelectionListener(new SelectionAdapter() {
         @Override
         public void widgetSelected(SelectionEvent e) {
-          fProxyBypassCheck.setEnabled(fProxyOverrideCheck.getSelection());
+          fProxyModeCombo.setEnabled(fProxyOverrideCheck.getSelection());
         }
       });
 
-      fProxyBypassCheck = new Button(proxyOverrideContainer, SWT.CHECK);
-      fProxyBypassCheck.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
-      ((GridData) fProxyBypassCheck.getLayoutData()).horizontalIndent = 20;
-      fProxyBypassCheck.setText(Messages.GeneralPropertyPage_BYPASS_PROXY);
-      fProxyBypassCheck.setSelection(fPrefFolderProxyBypass);
-      fProxyBypassCheck.setEnabled(fPrefFolderProxyOverrideState);
+      /* Explicit choice between "use the global proxy" and "bypass it" - a single checkbox left the
+       * unchecked state ambiguous (defaulting to "use proxy" without saying so), so this is a Combo instead. */
+      Composite proxyModeContainer = new Composite(proxyOverrideContainer, SWT.NONE);
+      proxyModeContainer.setLayout(LayoutUtils.createGridLayout(2, 0, 0));
+      proxyModeContainer.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
+      ((GridData) proxyModeContainer.getLayoutData()).horizontalIndent = 20;
+
+      Label proxyModeLabel = new Label(proxyModeContainer, SWT.NONE);
+      proxyModeLabel.setText(Messages.GeneralPropertyPage_PROXY_MODE_LABEL);
+
+      fProxyModeCombo = new Combo(proxyModeContainer, SWT.READ_ONLY);
+      fProxyModeCombo.add(Messages.GeneralPropertyPage_PROXY_MODE_USE_PROXY);
+      fProxyModeCombo.add(Messages.GeneralPropertyPage_PROXY_MODE_BYPASS);
+      fProxyModeCombo.select(fPrefFolderProxyBypass ? PROXY_MODE_BYPASS : PROXY_MODE_USE_PROXY);
+      fProxyModeCombo.setEnabled(fPrefFolderProxyOverrideState);
 
       /* Folder Override: grey out and show who is managing it if an ancestor Folder is enforcing */
       if (fProxyEnforcingAncestor != null) {
         fProxyOverrideCheck.setEnabled(false);
-        fProxyBypassCheck.setEnabled(false);
+        fProxyModeCombo.setEnabled(false);
 
         fProxyManagedNotice = new Label(proxyOverrideContainer, SWT.WRAP);
         fProxyManagedNotice.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
@@ -820,7 +842,7 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
         changed = true;
       }
 
-      boolean bypassVal = fProxyBypassCheck.getSelection();
+      boolean bypassVal = fProxyModeCombo.getSelectionIndex() == PROXY_MODE_BYPASS;
       if (fPrefFolderProxyBypass != bypassVal) {
         scope.putBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS, bypassVal);
         changed = true;

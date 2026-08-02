@@ -449,6 +449,37 @@
 
 ### Fixed
 
+- **Folder overrides: three issues found during manual testing of the
+  forced Auto-Update Interval / Proxy bypass feature above**
+  - A Bookmark nested under a Folder that forces the Auto-Update
+    Interval could still have its own "Automatically update" checkbox
+    edited in `GeneralPropertyPage`, even though an enforcing ancestor
+    Folder meant that setting had no effect. The "Managed by ancestor
+    folder" greyed-out state was only being computed for Folder
+    selections, not Bookmark selections - it's now computed for either,
+    since the cascade resolution itself already worked identically for
+    both.
+  - The Proxy-bypass sub-control was a single "Connect directly, bypass
+    proxy" checkbox, whose *unchecked* state ambiguously meant "use the
+    proxy" without saying so. Replaced with an explicit two-option
+    dropdown ("Use global proxy setting" / "Connect directly (bypass
+    proxy)") so the choice - and its default - is unambiguous.
+  - Proxy bypass was not actually forcing a direct connection: setting
+    `RequestConfig#setProxy(null)` alone only means "no proxy explicitly
+    requested for this call" to some route planners, which then still
+    fall back to the JVM-wide proxy (e.g. one installed globally via
+    `ProxySelector`/system properties, such as by Eclipse's
+    `org.eclipse.core.net` bundle). `DefaultProtocolHandler` now installs
+    an explicit `DefaultRoutePlanner` (whose `determineProxy()`
+    unconditionally returns `null`) on the `HttpClientBuilder` whenever a
+    Folder's bypass override is active, guaranteeing a direct connection
+    regardless of any global proxy configuration.
+
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/GeneralPropertyPage.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/Messages.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/messages.properties`
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/DefaultProtocolHandler.java`
+
 - **Fixed Tycho build failure caused by hardcoded version constraints in the
   bundled language packs**
   Moving the translations into the repo introduced a P2 dependency
