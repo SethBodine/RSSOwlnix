@@ -572,7 +572,6 @@ public class DefaultProtocolHandler implements IProtocolHandler {
 
       /* Create the Method. Wrap any RuntimeException into an IOException */
       boolean isPostRequest = properties != null && properties.containsKey(IConnectionPropertyConstants.POST);
-      boolean isGetRequest = !isPostRequest;
 
       if (isPostRequest)
         method = new HttpPost(link.toString());
@@ -581,19 +580,29 @@ public class DefaultProtocolHandler implements IProtocolHandler {
 
       setHeaders(properties, method);
 
-      if (isGetRequest) {
-        //method.getParams().setCookiePolicy(CookiePolicy.IGNORE_COOKIES);
-        RequestConfig config = RequestConfig.custom() //
-            .setCookieSpec(StandardCookieSpec.IGNORE) //
-            /* Socket Timeout - Max. time to wait for an answer */
-            .setConnectTimeout(Timeout.ofMilliseconds(conTimeout)) //
-            /* Connection Timeout - Max. time to wait for a connection */
-            .setConnectionRequestTimeout(Timeout.ofMilliseconds(conTimeout)) //
-            .setProxy(proxyHost) //
-            .setProxyPreferredAuthSchemes(proxyPreferredAuthSchemes) //
-            .build();
-        method.setConfig(config);
-      }
+      /*
+       * Apply the RequestConfig (timeouts, Proxy) to every request
+       * regardless of method. This used to be gated behind "if
+       * (isGetRequest)", which meant a POST request got no RequestConfig
+       * at all - no explicit timeout, and critically no explicit Proxy
+       * control, silently falling back to the HttpClientBuilder's default
+       * RequestConfig instead of what was computed above (including any
+       * Folder Proxy-bypass override). Feed reload currently never sets
+       * IConnectionPropertyConstants.POST, so this gap wasn't the cause of
+       * the current Proxy-override symptom, but it's a genuine latent bug
+       * for any future POST-based request and is fixed here regardless.
+       */
+      //method.getParams().setCookiePolicy(CookiePolicy.IGNORE_COOKIES);
+      RequestConfig config = RequestConfig.custom() //
+          .setCookieSpec(StandardCookieSpec.IGNORE) //
+          /* Socket Timeout - Max. time to wait for an answer */
+          .setConnectTimeout(Timeout.ofMilliseconds(conTimeout)) //
+          /* Connection Timeout - Max. time to wait for a connection */
+          .setConnectionRequestTimeout(Timeout.ofMilliseconds(conTimeout)) //
+          .setProxy(proxyHost) //
+          .setProxyPreferredAuthSchemes(proxyPreferredAuthSchemes) //
+          .build();
+      method.setConfig(config);
 
       if (isPostRequest && properties != null && properties.containsKey(IConnectionPropertyConstants.PARAMETERS)) {
         List<NameValuePair> params = new ArrayList<>();
@@ -636,8 +645,10 @@ public class DefaultProtocolHandler implements IProtocolHandler {
        * which requires and always uses a fixed non-null Proxy) is the one
        * whose determineProxy() unconditionally returns null.
        */
-      if (useProxyOverride != null && !useProxyOverride)
+      if (useProxyOverride != null && !useProxyOverride) {
         clientBuilder.setRoutePlanner(new DefaultRoutePlanner(null));
+        Activator.getDefault().logInfo("[FolderProxyOverride] internalOpenStream for '" + link + "' -> installed direct-only DefaultRoutePlanner (bypassing Proxy)"); //$NON-NLS-1$ //$NON-NLS-2$
+      }
 
       CloseableHttpClient client = clientBuilder.build();
 

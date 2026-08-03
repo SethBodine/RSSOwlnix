@@ -449,6 +449,45 @@
 
 ### Fixed
 
+- **Folder overrides: Proxy bypass still not taking effect - GET/POST
+  RequestConfig gap fixed, but root cause not yet confirmed**
+  Manual re-testing showed the Proxy override still has no effect on
+  actual network behavior in either direction, even after the
+  `DefaultRoutePlanner` fix. A detailed external bug report prompted a
+  full line-by-line re-audit of every handoff instead of further
+  speculative logging:
+  - Confirmed, with an exhaustive repo-wide search, that every reference
+    to `FOLDER_PROXY_OVERRIDE_STATE` / `FOLDER_PROXY_BYPASS` uses the
+    exact same `DefaultPreferences` constant - no key typo/mismatch
+    between where the UI writes them and where `Controller#reload()`
+    reads them.
+  - Confirmed `Controller#reload()`'s cascade resolution and `USE_PROXY`
+    injection, and `DefaultProtocolHandler`'s consumption of it
+    (including variable scoping around `useProxyOverride`/`proxyHost`),
+    are logically correct on re-inspection.
+  - Found and fixed one genuine, independently-real defect the report
+    surfaced: `DefaultProtocolHandler` only attached a `RequestConfig`
+    (timeouts, Proxy) to the request inside an `if (isGetRequest)`
+    branch, so a POST request would silently get the HttpClientBuilder's
+    default `RequestConfig` instead - including default (unset) Proxy
+    handling - regardless of any Folder override. This is now applied to
+    every request regardless of method. Feed reload currently never sets
+    `IConnectionPropertyConstants.POST`, though, so this specific gap
+    does not appear to explain the reported symptom for normal feed
+    reloads - it's a correctness fix, not a confirmed root-cause fix.
+  - All temporary diagnostic logging from the previous pass has been
+    removed at the reporter's request.
+
+  The root cause of the Proxy-override symptom itself remains
+  unconfirmed pending runtime testing (e.g. with a debugger/breakpoints,
+  since further logging was ruled out) - static re-verification did not
+  surface a further defect in the write → cascade-resolve → inject →
+  consume chain.
+
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/DefaultProtocolHandler.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
+  `org.rssowl.ui/src/org/rssowl/ui/internal/dialogs/properties/GeneralPropertyPage.java`
+
 - **Folder overrides: three issues found during manual testing of the
   forced Auto-Update Interval / Proxy bypass feature above**
   - A Bookmark nested under a Folder that forces the Auto-Update
