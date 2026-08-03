@@ -131,6 +131,16 @@ public class DefaultProtocolHandler implements IProtocolHandler {
 
   /* Http Status Codes */
   private static final int HTTP_ERRORS = 400;
+
+  /*
+   * TEMPORARY DIAGNOSTIC - off by default, no code impact unless enabled.
+   * Toggle without rebuilding: add -Drssowl.debugProxyOverride=true to the
+   * product's .ini launcher file (next to the executable) and relaunch.
+   * To remove entirely later: search the repo for DEBUG_PROXY_OVERRIDE
+   * and delete this field plus every guarded block that references it.
+   */
+  private static final boolean DEBUG_PROXY_OVERRIDE = Boolean.getBoolean("rssowl.debugProxyOverride"); //$NON-NLS-1$
+
   private static final int HTTP_STATUS_NOT_MODIFIED = 304;
   private static final int HTTP_ERROR_AUTH_REQUIRED = 401;
   private static final int HTTP_ERROR_PROXY_AUTH_REQUIRED = 407;
@@ -532,6 +542,9 @@ public class DefaultProtocolHandler implements IProtocolHandler {
     if (properties != null && properties.get(IConnectionPropertyConstants.USE_PROXY) instanceof Boolean)
       useProxyOverride = (Boolean) properties.get(IConnectionPropertyConstants.USE_PROXY);
 
+    if (DEBUG_PROXY_OVERRIDE)
+      Activator.getDefault().logInfo("[ProxyOverrideDebug] internalOpenStream '" + link + "' -> useProxyOverride=" + useProxyOverride); //$NON-NLS-1$ //$NON-NLS-2$
+
     /* Explicitly bypassing the Proxy: connect directly, skip proxy resolution entirely */
     IProxyCredentials proxyCredentials = (useProxyOverride != null && !useProxyOverride) ? null : Owl.getConnectionService().getProxyCredentials(link);
     if (proxyCredentials != null) {
@@ -647,7 +660,8 @@ public class DefaultProtocolHandler implements IProtocolHandler {
        */
       if (useProxyOverride != null && !useProxyOverride) {
         clientBuilder.setRoutePlanner(new DefaultRoutePlanner(null));
-        Activator.getDefault().logInfo("[FolderProxyOverride] internalOpenStream for '" + link + "' -> installed direct-only DefaultRoutePlanner (bypassing Proxy)"); //$NON-NLS-1$ //$NON-NLS-2$
+        if (DEBUG_PROXY_OVERRIDE)
+          Activator.getDefault().logInfo("[ProxyOverrideDebug] internalOpenStream '" + link + "' -> installed direct-only DefaultRoutePlanner"); //$NON-NLS-1$ //$NON-NLS-2$
       }
 
       CloseableHttpClient client = clientBuilder.build();

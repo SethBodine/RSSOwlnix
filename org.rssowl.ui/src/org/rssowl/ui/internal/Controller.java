@@ -202,6 +202,16 @@ public class Controller {
   /* System Property indicating that the application should not support update */
   private static final String DISABLE_UPDATE_PROPERTY = "disableUpdate"; //$NON-NLS-1$
 
+  /*
+   * TEMPORARY DIAGNOSTIC - off by default, no code impact unless enabled.
+   * Toggle without rebuilding: add -Drssowl.debugProxyOverride=true to the
+   * product's .ini launcher file (next to the executable) and relaunch -
+   * no CI rebuild needed either to turn on or back off.
+   * To remove entirely later: search the repo for DEBUG_PROXY_OVERRIDE
+   * and delete this field plus every guarded block that references it.
+   */
+  private static final boolean DEBUG_PROXY_OVERRIDE = Boolean.getBoolean("rssowl.debugProxyOverride"); //$NON-NLS-1$
+
   /* Flag for an Out of Memory Exception and Emergency Shutdown */
   private static final AtomicBoolean OOM_EMERGENCY_SHUTDOWN = new AtomicBoolean(false);
 
@@ -766,6 +776,10 @@ public class Controller {
         if (enforcingProxyFolder != null) {
           boolean bypassProxy = Owl.getPreferenceService().getEntityScope(enforcingProxyFolder).getBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS);
           properties.put(IConnectionPropertyConstants.USE_PROXY, !bypassProxy);
+          if (DEBUG_PROXY_OVERRIDE)
+            Activator.getDefault().getLog().info("[ProxyOverrideDebug] Controller.reload '" + bookmark.getName() + "' -> enforced by Folder '" + enforcingProxyFolder.getName() + "', bypassProxy=" + bypassProxy + ", USE_PROXY=" + !bypassProxy); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        } else if (DEBUG_PROXY_OVERRIDE) {
+          Activator.getDefault().getLog().info("[ProxyOverrideDebug] Controller.reload '" + bookmark.getName() + "' -> no ancestor Folder enforcing, USE_PROXY left unset"); //$NON-NLS-1$ //$NON-NLS-2$
         }
       }
 

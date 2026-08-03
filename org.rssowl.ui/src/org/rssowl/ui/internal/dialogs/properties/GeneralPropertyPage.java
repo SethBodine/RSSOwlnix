@@ -48,6 +48,7 @@ import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.rssowl.core.Owl;
+import org.rssowl.ui.internal.Activator;
 import org.rssowl.core.connection.ConnectionException;
 import org.rssowl.core.internal.persist.pref.CascadingScope;
 import org.rssowl.core.internal.persist.pref.DefaultPreferences;
@@ -104,6 +105,15 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
   /* Proxy-Mode-Indeces in Combo */
   private static final int PROXY_MODE_USE_PROXY = 0;
   private static final int PROXY_MODE_BYPASS = 1;
+
+  /*
+   * TEMPORARY DIAGNOSTIC - off by default, no code impact unless enabled.
+   * Toggle without rebuilding: add -Drssowl.debugProxyOverride=true to the
+   * product's .ini launcher file (next to the executable) and relaunch.
+   * To remove entirely later: search the repo for DEBUG_PROXY_OVERRIDE
+   * and delete this field plus every guarded block that references it.
+   */
+  private static final boolean DEBUG_PROXY_OVERRIDE = Boolean.getBoolean("rssowl.debugProxyOverride"); //$NON-NLS-1$
 
   private Composite fParent;
   private IPropertyDialogSite fSite;
@@ -847,6 +857,9 @@ public class GeneralPropertyPage implements IEntityPropertyPage {
         scope.putBoolean(DefaultPreferences.FOLDER_PROXY_BYPASS, bypassVal);
         changed = true;
       }
+
+      if (DEBUG_PROXY_OVERRIDE)
+        Activator.getDefault().logWarning("[ProxyOverrideDebug] GeneralPropertyPage saved on '" + ((IFolder) entity).getName() + "': FOLDER_PROXY_OVERRIDE_STATE=" + bVal + ", FOLDER_PROXY_BYPASS=" + bypassVal, null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     return changed;

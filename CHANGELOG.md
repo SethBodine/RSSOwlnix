@@ -475,14 +475,25 @@
     `IConnectionPropertyConstants.POST`, though, so this specific gap
     does not appear to explain the reported symptom for normal feed
     reloads - it's a correctness fix, not a confirmed root-cause fix.
-  - All temporary diagnostic logging from the previous pass has been
-    removed at the reporter's request.
+  - Since the reporter builds exclusively via CI (no local build/debug
+    environment) and asked not to ship a permanent pile of logging that
+    can't be toggled or removed, the three diagnostic log lines from the
+    previous pass have been reinstated behind a single, off-by-default
+    flag: `DEBUG_PROXY_OVERRIDE`, gated on the JVM system property
+    `rssowl.debugProxyOverride`. It has zero effect (and effectively zero
+    cost) unless explicitly enabled, and can be turned on or off without
+    a rebuild by adding `-Drssowl.debugProxyOverride=true` under the
+    `-vmargs` section of the product's `.ini` launcher file and
+    relaunching. To remove entirely later, search the repo for
+    `DEBUG_PROXY_OVERRIDE` and delete the three declarations plus their
+    guarded blocks - each is self-contained and clearly marked.
 
   The root cause of the Proxy-override symptom itself remains
-  unconfirmed pending runtime testing (e.g. with a debugger/breakpoints,
-  since further logging was ruled out) - static re-verification did not
-  surface a further defect in the write → cascade-resolve → inject →
-  consume chain.
+  unconfirmed - static re-verification did not surface a further defect
+  in the write → cascade-resolve → inject → consume chain. Next step is
+  to enable the flag above and reproduce, then inspect the
+  `[ProxyOverrideDebug]` lines in the Error Log to see exactly where the
+  resolved value diverges from what's expected.
 
   `org.rssowl.core/src/org/rssowl/core/internal/connection/DefaultProtocolHandler.java`
   `org.rssowl.ui/src/org/rssowl/ui/internal/Controller.java`
