@@ -500,9 +500,38 @@ public class DefaultProtocolHandler implements IProtocolHandler {
     if (URIUtils.FILE_SCHEME.equals(link.getScheme()))
       return loadFileProtocol(link);
 
+    /*
+     * Determine whether Proxy usage is explicitly overridden via properties
+     * (e.g. a Folder proxy-bypass override) up front, since it decides which
+     * Socket Factories get registered below - not just how routing/RequestConfig
+     * are configured further down.
+     */
+    Boolean useProxyOverride = null;
+    if (properties != null && properties.get(IConnectionPropertyConstants.USE_PROXY) instanceof Boolean)
+      useProxyOverride = (Boolean) properties.get(IConnectionPropertyConstants.USE_PROXY);
+    boolean bypassProxy = useProxyOverride != null && !useProxyOverride;
+
     RegistryBuilder<ConnectionSocketFactory> registryBuilder = RegistryBuilder.<ConnectionSocketFactory> create();
-    registryBuilder.register(URIUtils.HTTP_SCHEME, PlainConnectionSocketFactory.getSocketFactory());
-    registryBuilder.register(URIUtils.HTTPS_SCHEME, Owl.getConnectionService().ConnectionSocketFactory());
+    ConnectionSocketFactory plainSocketFactory = PlainConnectionSocketFactory.getSocketFactory();
+    ConnectionSocketFactory secureSocketFactory = Owl.getConnectionService().ConnectionSocketFactory();
+
+    /*
+     * When bypassing the Proxy, wrap both Socket Factories so the Socket
+     * itself is created via new Socket(Proxy.NO_PROXY). Without this, a
+     * JVM-wide socksProxyHost/socksProxyPort system property (as set by
+     * Eclipse's org.eclipse.core.net bundle to mirror a configured SOCKS
+     * Proxy) would still silently tunnel the connection through the Proxy
+     * at the raw socket layer, regardless of what the Route Planner and
+     * RequestConfig below correctly resolved to "direct". See
+     * DirectConnectionSocketFactory for the full explanation.
+     */
+    if (bypassProxy) {
+      plainSocketFactory = new DirectConnectionSocketFactory(plainSocketFactory);
+      secureSocketFactory = new DirectConnectionSocketFactory(secureSocketFactory);
+    }
+
+    registryBuilder.register(URIUtils.HTTP_SCHEME, plainSocketFactory);
+    registryBuilder.register(URIUtils.HTTPS_SCHEME, secureSocketFactory);
 
     String strLink = link.toString();
     if (strLink.startsWith("feed")) { //$NON-NLS-1$
@@ -527,13 +556,8 @@ public class DefaultProtocolHandler implements IProtocolHandler {
 
     HttpHost proxyHost = null;
 
-    /* Determine whether Proxy usage is explicitly overridden via properties (e.g. a Folder proxy-bypass override) */
-    Boolean useProxyOverride = null;
-    if (properties != null && properties.get(IConnectionPropertyConstants.USE_PROXY) instanceof Boolean)
-      useProxyOverride = (Boolean) properties.get(IConnectionPropertyConstants.USE_PROXY);
-
     /* Explicitly bypassing the Proxy: connect directly, skip proxy resolution entirely */
-    IProxyCredentials proxyCredentials = (useProxyOverride != null && !useProxyOverride) ? null : Owl.getConnectionService().getProxyCredentials(link);
+    IProxyCredentials proxyCredentials = bypassProxy ? null : Owl.getConnectionService().getProxyCredentials(link);
     if (proxyCredentials != null) {
 //old:    /* --- Apply Proxy Config to HTTPClient */
 //old://  client.getParams().setAuthenticationPreemptive(true);
@@ -645,10 +669,8 @@ public class DefaultProtocolHandler implements IProtocolHandler {
        * which requires and always uses a fixed non-null Proxy) is the one
        * whose determineProxy() unconditionally returns null.
        */
-      if (useProxyOverride != null && !useProxyOverride) {
+      if (bypassProxy)
         clientBuilder.setRoutePlanner(new DefaultRoutePlanner(null));
-        Activator.getDefault().logInfo("[FolderProxyOverride] internalOpenStream for '" + link + "' -> installed direct-only DefaultRoutePlanner (bypassing Proxy)"); //$NON-NLS-1$ //$NON-NLS-2$
-      }
 
       CloseableHttpClient client = clientBuilder.build();
 

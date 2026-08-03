@@ -449,6 +449,45 @@
 
 ### Fixed
 
+- **Folder overrides: Proxy bypass root cause found - JVM-wide SOCKS
+  proxy was intercepting sockets below HttpClient's own routing**
+  Root cause confirmed via runtime debugging (breakpoints, not logging,
+  per the previous entry's note): `PlainConnectionSocketFactory` (HTTP)
+  and Apache's `SSLConnectionSocketFactory` (HTTPS, wrapped by
+  `EasySSLConnectionSocketFactory`) both create their underlying `Socket`
+  via the bare `new Socket()` constructor. The JDK transparently routes
+  any socket created this way through the `socksProxyHost`/
+  `socksProxyPort` system properties whenever they're set, completely
+  independent of whatever HttpClient's own Route Planner decided.
+  Eclipse's `org.eclipse.core.net` bundle sets those system properties
+  JVM-wide at startup to mirror a manually configured SOCKS proxy, so
+  every "direct" connection was still being silently tunneled through the
+  SOCKS proxy at the raw socket layer - regardless of the
+  `DefaultRoutePlanner` fix above, which was correctly forcing
+  HttpClient's own routing decision to "direct" the whole time. The break
+  was one layer deeper than HttpClient's routing: the socket itself.
+
+  Added `DirectConnectionSocketFactory`, a wrapper Socket Factory that
+  constructs sockets via `new Socket(Proxy.NO_PROXY)` - the JDK-documented
+  way to opt a single `Socket` out of implicit JVM-wide proxying - while
+  delegating the actual connect/TLS-handshake logic unchanged to the
+  original Socket Factory. `DefaultProtocolHandler` now registers this
+  wrapper in place of the normal plain/secure Socket Factories only when
+  a Folder Proxy-bypass override is active for the current request;
+  normal requests are unaffected and a configured Proxy (including SOCKS)
+  continues to work as before. The `useProxyOverride`/`bypassProxy`
+  determination was moved earlier in
+  `DefaultProtocolHandler#internalOpenStream()` since it now also gates
+  Socket Factory selection, not just routing/`RequestConfig`.
+
+  All temporary diagnostic logging (`Activator.getDefault().logInfo(...)`)
+  added during the investigation has been removed; no debug flags or
+  guarded log statements remain in `DefaultProtocolHandler`, `Controller`,
+  or `GeneralPropertyPage`.
+
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/DefaultProtocolHandler.java`
+  `org.rssowl.core/src/org/rssowl/core/internal/connection/DirectConnectionSocketFactory.java` (new)
+
 - **Folder overrides: Proxy bypass still not taking effect - GET/POST
   RequestConfig gap fixed, but root cause not yet confirmed**
   Manual re-testing showed the Proxy override still has no effect on
